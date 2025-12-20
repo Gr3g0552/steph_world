@@ -22,4 +22,3 @@ EXPOSE 5000
 
 # Commande par défaut
 CMD ["npm", "start"]
-

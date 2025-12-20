@@ -12,7 +12,7 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-# Vérifier docker-compose
+# Vérifier docker-compose et permissions
 if command -v docker-compose &> /dev/null; then
     COMPOSE_CMD="docker-compose"
 elif docker compose version &> /dev/null; then
@@ -20,6 +20,15 @@ elif docker compose version &> /dev/null; then
 else
     echo "❌ Docker Compose n'est pas installé."
     exit 1
+fi
+
+# Vérifier les permissions Docker
+if ! docker ps &> /dev/null; then
+    echo "⚠️  Permissions Docker insuffisantes. Utilisation de sudo..."
+    COMPOSE_CMD="sudo $COMPOSE_CMD"
+    DOCKER_CMD="sudo docker"
+else
+    DOCKER_CMD="docker"
 fi
 
 cd "$(dirname "$0")"
@@ -38,6 +47,7 @@ sleep 5
 # Initialiser la base de données si nécessaire
 if [ ! -f database/steph_world.db ]; then
     echo "🗄️  Initialisation de la base de données..."
+    sleep 10
     $COMPOSE_CMD exec -T backend sh -c "cd /app && node database/init.js" || echo "⚠️  Erreur lors de l'initialisation, mais le conteneur continue..."
 fi
 

@@ -13,6 +13,11 @@ else
     exit 1
 fi
 
+# Vérifier les permissions Docker
+if ! docker ps &> /dev/null; then
+    COMPOSE_CMD="sudo $COMPOSE_CMD"
+fi
+
 cd "$(dirname "$0")"
 
 echo "🛑 Arrêt de Steph World..."
