@@ -1,0 +1,19 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Installer nodemon globalement pour le développement
+RUN npm install -g nodemon
+
+# Copier les fichiers de dépendances
+COPY package*.json ./
+
+# Installer les dépendances
+RUN npm install
+
+# Exposer le port
+EXPOSE 5000
+
+# Commande par défaut (sera override par docker-compose)
+CMD ["npm", "run", "dev"]
+
