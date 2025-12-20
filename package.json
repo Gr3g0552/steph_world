@@ -1,0 +1,19 @@
+{
+  "name": "steph_world",
+  "version": "1.0.0",
+  "description": "Steph World - Plateforme web personnalisée avec interface utilisateur et administration",
+  "scripts": {
+    "install-backend": "cd backend && npm install",
+    "install-frontend": "cd frontend && npm install",
+    "install-all": "npm run install-backend && npm run install-frontend",
+    "init-db": "cd database && node init.js",
+    "start-backend": "cd backend && npm start",
+    "start-frontend": "cd frontend && npm start",
+    "dev-backend": "cd backend && npm run dev",
+    "deploy": "./scripts/deploy.sh"
+  },
+  "keywords": ["social", "platform", "admin", "user"],
+  "author": "Gregory Monsoro",
+  "license": "ISC"
+}
+
