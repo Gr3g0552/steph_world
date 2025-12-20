@@ -16,6 +16,7 @@ const PostDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     loadPost();
@@ -82,7 +83,6 @@ const PostDetailPage = () => {
   const description = post.description || '';
   const wordCount = countWords(description);
   const shouldTruncate = wordCount > 30;
-  const [expanded, setExpanded] = useState(false);
   const displayText = shouldTruncate && !expanded 
     ? truncateText(description, 30) 
     : description;
