@@ -5,17 +5,16 @@ WORKDIR /app
 # Installer wget pour healthcheck
 RUN apk add --no-cache wget
 
-# Copier les fichiers de dépendances backend
-COPY backend/package*.json ./
+# Copier les fichiers de dépendances
+COPY package*.json ./
 
 # Installer les dépendances
 RUN npm install
 
-# Copier le reste du code backend
-COPY backend/ ./
+# Copier le reste du code
+COPY . .
 
-# Copier le dossier database pour l'initialisation
-COPY database/ ../database/
+# Copier le script d'initialisation de la base de données (sera copié avec COPY . .)
 
 # Exposer le port
 EXPOSE 5000
