@@ -39,15 +39,26 @@ app.use('/api/', (req, res, next) => {
     return next();
   }
   
-  // Check if user is admin and bypass rate limiting completely
-  checkAdminBypass(req, res, () => {
-    if (req.skipRateLimit === true) {
-      // Admin user - skip rate limiting entirely
-      return next();
+  // Check if user is admin FIRST - before any rate limiting
+  const authHeader = req.headers['authorization'];
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const jwt = require('jsonwebtoken');
+      const token = authHeader.split(' ')[1];
+      if (token) {
+        const decoded = jwt.decode(token);
+        if (decoded && decoded.role === 'admin') {
+          // Admin user - completely bypass rate limiting
+          return next();
+        }
+      }
+    } catch (error) {
+      // If decode fails, continue to rate limiting
     }
-    // Regular user - apply rate limiting
-    strictLimiter(req, res, next);
-  });
+  }
+  
+  // Regular user - apply rate limiting
+  strictLimiter(req, res, next);
 });
 app.use(sanitizeBody);
 app.use(validateId);

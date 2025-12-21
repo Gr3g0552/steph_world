@@ -76,6 +76,8 @@ const checkAdminBypass = (req, res, next) => {
                 if (decoded && decoded.role === 'admin') {
                     // Set flag to bypass rate limiting
                     req.skipRateLimit = true;
+                    // Also set a property to identify admin requests
+                    req.isAdmin = true;
                 }
             }
         } catch (error) {
@@ -92,7 +94,27 @@ const strictLimiter = rateLimit({
     max: 1000, // Very high limit for regular users
     skip: (req) => {
         // Skip rate limiting if admin bypass flag is set
-        return req.skipRateLimit === true;
+        if (req.skipRateLimit === true || req.isAdmin === true) {
+            return true;
+        }
+        
+        // Also check JWT directly as fallback
+        const authHeader = req.headers['authorization'];
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            try {
+                const jwt = require('jsonwebtoken');
+                const token = authHeader.split(' ')[1];
+                if (token) {
+                    const decoded = jwt.decode(token);
+                    if (decoded && decoded.role === 'admin') {
+                        return true;
+                    }
+                }
+            } catch (error) {
+                // Continue with rate limiting
+            }
+        }
+        return false;
     },
     message: { error: 'Too many requests, please try again later' },
     standardHeaders: true,
