@@ -3,14 +3,32 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="theme-color" content="#000000" />
     <meta name="description" content="Steph World - Plateforme personnalisée" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="alternate icon" href="/favicon.ico" />
     <title>Steph World</title>
+    <!-- Polyfill for older browsers -->
+    <script>
+      // Basic feature detection and warnings
+      if (typeof console === 'undefined') {
+        window.console = { log: function() {}, warn: function() {}, error: function() {} };
+      }
+      // Check for critical features
+      if (typeof JSON === 'undefined') {
+        console.error('JSON is not supported. This browser is too old.');
+      }
+    </script>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <noscript>
+      <div style="text-align: center; padding: 50px; color: white; background: #0a0a0a;">
+        <h1>JavaScript Required</h1>
+        <p>You need to enable JavaScript to run this app.</p>
+        <p>Please enable JavaScript in your browser settings and refresh the page.</p>
+      </div>
+    </noscript>
     <div id="root"></div>
   </body>
 </html>

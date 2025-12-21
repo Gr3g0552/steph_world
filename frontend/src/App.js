@@ -5,6 +5,8 @@ import { ToastProvider } from './context/ToastContext';
 import { motion } from 'framer-motion';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import BrowserCompatibilityWarning from './components/BrowserCompatibilityWarning';
+import { safeLocalStorage, safeJSONParse } from './utils/browserCompatibility';
 
 // User pages
 import HomePage from './pages/HomePage';
@@ -27,19 +29,20 @@ import AdminHomepageSettings from './pages/admin/AdminHomepageSettings';
 import './App.css';
 
 const PrivateRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
+  const token = safeLocalStorage.getItem('token');
   return token ? children : <Navigate to="/login" />;
 };
 
 const AdminRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const token = safeLocalStorage.getItem('token');
+  const userStr = safeLocalStorage.getItem('user');
+  const user = safeJSONParse(userStr, {});
   
   if (!token) {
     return <Navigate to="/login" />;
   }
   
-  if (user.role !== 'admin') {
+  if (user && user.role !== 'admin') {
     return <Navigate to="/" />;
   }
   
@@ -52,6 +55,7 @@ function App() {
       <ToastProvider>
         <Router>
           <div className="App">
+            <BrowserCompatibilityWarning />
             <Header />
             <motion.main
               initial={{ opacity: 0 }}

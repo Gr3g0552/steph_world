@@ -31,7 +31,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Enhanced rate limiting
-const { strictLimiter, sanitizeBody, validateId, checkAdminBypass } = require('./middleware/security');
+const { strictLimiter, sanitizeBody, validateId } = require('./middleware/security');
 // Check admin status and apply rate limiting
 app.use('/api/', (req, res, next) => {
   // Skip rate limiting for login route (has its own authLimiter)
@@ -40,7 +40,10 @@ app.use('/api/', (req, res, next) => {
   }
   
   // Check if user is admin FIRST - before any rate limiting
+  // This must happen synchronously before the rate limiter runs
   const authHeader = req.headers['authorization'];
+  let isAdmin = false;
+  
   if (authHeader && authHeader.startsWith('Bearer ')) {
     try {
       const jwt = require('jsonwebtoken');
@@ -48,13 +51,17 @@ app.use('/api/', (req, res, next) => {
       if (token) {
         const decoded = jwt.decode(token);
         if (decoded && decoded.role === 'admin') {
-          // Admin user - completely bypass rate limiting
-          return next();
+          isAdmin = true;
         }
       }
     } catch (error) {
       // If decode fails, continue to rate limiting
     }
+  }
+  
+  // Admin user - completely bypass rate limiting
+  if (isAdmin) {
+    return next();
   }
   
   // Regular user - apply rate limiting

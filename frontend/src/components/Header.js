@@ -65,7 +65,7 @@ const Header = () => {
                   whileTap={{ scale: 0.95 }}
                 >
                   <img
-                    src={user.profile_image || '/default-avatar.png'}
+                    src={user.profile_image || 'https://via.placeholder.com/40'}
                     alt={user.username}
                     className="profile-avatar"
                     onError={(e) => {

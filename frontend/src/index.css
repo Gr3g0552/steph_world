@@ -38,8 +38,32 @@ code {
   background: #555;
 }
 
-/* Smooth transitions */
+/* Smooth transitions - with vendor prefixes for older browsers */
 * {
+  -webkit-transition: background-color 0.2s ease, color 0.2s ease;
+  -moz-transition: background-color 0.2s ease, color 0.2s ease;
+  -o-transition: background-color 0.2s ease, color 0.2s ease;
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Flexbox fallback for older browsers */
+@supports not (display: flex) {
+  .flex-container {
+    display: -webkit-box;
+    display: -moz-box;
+    display: -ms-flexbox;
+  }
+}
+
+/* Grid fallback for older browsers */
+@supports not (display: grid) {
+  .grid-container {
+    display: block;
+  }
+  
+  .grid-container > * {
+    display: inline-block;
+    vertical-align: top;
+  }
 }
 

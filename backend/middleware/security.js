@@ -92,6 +92,27 @@ const checkAdminBypass = (req, res, next) => {
 const strictLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 1000, // Very high limit for regular users
+    // Use custom key generator to separate admin users
+    keyGenerator: (req) => {
+        const authHeader = req.headers['authorization'];
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            try {
+                const jwt = require('jsonwebtoken');
+                const token = authHeader.split(' ')[1];
+                if (token) {
+                    const decoded = jwt.decode(token);
+                    if (decoded && decoded.role === 'admin') {
+                        // Admin users get a special key with unlimited access
+                        return `admin-${decoded.userId}-unlimited`;
+                    }
+                }
+            } catch (error) {
+                // Fall through to default
+            }
+        }
+        // Regular users use IP-based key
+        return req.ip || req.connection.remoteAddress || 'unknown';
+    },
     skip: (req) => {
         // Skip rate limiting if admin bypass flag is set
         if (req.skipRateLimit === true || req.isAdmin === true) {
@@ -119,6 +140,8 @@ const strictLimiter = rateLimit({
     message: { error: 'Too many requests, please try again later' },
     standardHeaders: true,
     legacyHeaders: false,
+    // Use a custom store that handles admin keys specially
+    store: new (require('express-rate-limit').MemoryStore)(),
 });
 const uploadLimiter = createRateLimiter(60 * 60 * 1000, 20, 'Too many uploads, please try again later');
 const commentLimiter = createRateLimiter(15 * 60 * 1000, 30, 'Too many comments, please try again later');

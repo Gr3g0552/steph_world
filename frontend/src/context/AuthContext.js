@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 import api from '../services/api';
+import { safeLocalStorage, safeJSONParse } from '../utils/browserCompatibility';
 
 export const AuthContext = createContext();
 
@@ -8,35 +9,54 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
+    const token = safeLocalStorage.getItem('token');
+    const savedUser = safeLocalStorage.getItem('user');
     
     if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
+      const parsedUser = safeJSONParse(savedUser);
+      if (parsedUser) {
+        setUser(parsedUser);
+      }
       // Verify token is still valid
       api.get('/auth/me')
         .then(response => {
-          setUser(response.data);
-          localStorage.setItem('user', JSON.stringify(response.data));
+          if (response && response.data) {
+            setUser(response.data);
+            safeLocalStorage.setItem('user', JSON.stringify(response.data));
+          }
         })
         .catch(() => {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+          safeLocalStorage.removeItem('token');
+          safeLocalStorage.removeItem('user');
           setUser(null);
         })
-        .finally(() => setLoading(false));
+        .finally(() => {
+          if (setLoading) {
+            setLoading(false);
+          }
+        });
     } else {
       setLoading(false);
     }
   }, []);
 
   const login = async (email, password) => {
-    const response = await api.post('/auth/login', { email, password });
-    const { token, user } = response.data;
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    setUser(user);
-    return user;
+    try {
+      const response = await api.post('/auth/login', { email, password });
+      if (response && response.data) {
+        const { token, user } = response.data;
+        if (token) {
+          safeLocalStorage.setItem('token', token);
+        }
+        if (user) {
+          safeLocalStorage.setItem('user', JSON.stringify(user));
+          setUser(user);
+          return user;
+        }
+      }
+    } catch (error) {
+      throw error;
+    }
   };
 
   const register = async (email, username, password) => {
@@ -44,14 +64,16 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    safeLocalStorage.removeItem('token');
+    safeLocalStorage.removeItem('user');
     setUser(null);
   };
 
   const updateUser = (updatedUser) => {
-    setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
+    if (updatedUser) {
+      setUser(updatedUser);
+      safeLocalStorage.setItem('user', JSON.stringify(updatedUser));
+    }
   };
 
   return (

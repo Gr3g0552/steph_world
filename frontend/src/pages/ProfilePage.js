@@ -6,6 +6,7 @@ import { useToast } from '../hooks/useToast';
 import api from '../services/api';
 import PostCard from '../components/PostCard';
 import FollowButton from '../components/FollowButton';
+import { safeLocalStorage } from '../utils/browserCompatibility';
 import './ProfilePage.css';
 
 const ProfilePage = () => {
@@ -79,7 +80,7 @@ const ProfilePage = () => {
       setIsEditing(false);
       if (currentUser) {
         const updatedUser = { ...currentUser, ...formData };
-        localStorage.setItem('user', JSON.stringify(updatedUser));
+        safeLocalStorage.setItem('user', JSON.stringify(updatedUser));
       }
       showToast('Profil mis à jour avec succès', 'success');
     } catch (error) {
