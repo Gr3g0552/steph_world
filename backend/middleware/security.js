@@ -92,56 +92,38 @@ const checkAdminBypass = (req, res, next) => {
 const strictLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 1000, // Very high limit for regular users
-    // Use custom key generator to separate admin users
-    keyGenerator: (req) => {
-        const authHeader = req.headers['authorization'];
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            try {
-                const jwt = require('jsonwebtoken');
-                const token = authHeader.split(' ')[1];
-                if (token) {
-                    const decoded = jwt.decode(token);
-                    if (decoded && decoded.role === 'admin') {
-                        // Admin users get a special key with unlimited access
-                        return `admin-${decoded.userId}-unlimited`;
-                    }
-                }
-            } catch (error) {
-                // Fall through to default
-            }
-        }
-        // Regular users use IP-based key
-        return req.ip || req.connection.remoteAddress || 'unknown';
-    },
     skip: (req) => {
-        // Skip rate limiting if admin bypass flag is set
+        // PRIMARY CHECK: Skip if admin bypass flag is set (set in server.js before rate limiter)
+        // This is the most reliable check since it's set synchronously before the rate limiter runs
         if (req.skipRateLimit === true || req.isAdmin === true) {
             return true;
         }
         
-        // Also check JWT directly as fallback
+        // FALLBACK CHECK: Check JWT directly in case flag wasn't set
+        // This provides redundancy in case the flag check fails
         const authHeader = req.headers['authorization'];
-        if (authHeader && authHeader.startsWith('Bearer ')) {
+        if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
             try {
                 const jwt = require('jsonwebtoken');
                 const token = authHeader.split(' ')[1];
-                if (token) {
+                if (token && typeof token === 'string') {
                     const decoded = jwt.decode(token);
                     if (decoded && decoded.role === 'admin') {
-                        return true;
+                        // Set flags for consistency
+                        req.skipRateLimit = true;
+                        req.isAdmin = true;
+                        return true; // Skip rate limiting for admin
                     }
                 }
             } catch (error) {
-                // Continue with rate limiting
+                // Continue with rate limiting on error
             }
         }
-        return false;
+        return false; // Apply rate limiting for non-admin users
     },
     message: { error: 'Too many requests, please try again later' },
     standardHeaders: true,
     legacyHeaders: false,
-    // Use a custom store that handles admin keys specially
-    store: new (require('express-rate-limit').MemoryStore)(),
 });
 const uploadLimiter = createRateLimiter(60 * 60 * 1000, 20, 'Too many uploads, please try again later');
 const commentLimiter = createRateLimiter(15 * 60 * 1000, 30, 'Too many comments, please try again later');

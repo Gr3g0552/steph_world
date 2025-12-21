@@ -52,6 +52,11 @@ app.use('/api/', (req, res, next) => {
         const decoded = jwt.decode(token);
         if (decoded && decoded.role === 'admin') {
           isAdmin = true;
+          // Set flag on request for rate limiter
+          req.skipRateLimit = true;
+          req.isAdmin = true;
+          // Log for debugging (remove in production if too verbose)
+          // console.log('Admin user detected, bypassing rate limit');
         }
       }
     } catch (error) {
@@ -64,7 +69,7 @@ app.use('/api/', (req, res, next) => {
     return next();
   }
   
-  // Regular user - apply rate limiting
+  // Regular user - apply rate limiting with admin check in skip function
   strictLimiter(req, res, next);
 });
 app.use(sanitizeBody);
