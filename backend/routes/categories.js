@@ -28,6 +28,10 @@ router.get('/', authenticateToken, async (req, res) => {
             } else {
                 category.background_images = [];
             }
+            // Set default interval if not set
+            if (!category.image_interval) {
+                category.image_interval = 3000;
+            }
         }
 
         res.json(categories);
@@ -64,6 +68,10 @@ router.get('/:id', authenticateToken, async (req, res) => {
             }
         } else {
             category.background_images = [];
+        }
+        // Set default interval if not set
+        if (!category.image_interval) {
+            category.image_interval = 3000;
         }
 
         res.json(category);

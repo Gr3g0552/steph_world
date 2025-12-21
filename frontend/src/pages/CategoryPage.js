@@ -6,6 +6,7 @@ import api from '../services/api';
 import BackgroundSlider from '../components/BackgroundSlider';
 import PostCard from '../components/PostCard';
 import CreatePostModal from '../components/CreatePostModal';
+import SkeletonLoader from '../components/SkeletonLoader';
 import { useAuth } from '../hooks/useAuth';
 import './CategoryPage.css';
 
@@ -71,14 +72,19 @@ const CategoryPage = () => {
   };
 
   if (loading && posts.length === 0) {
-    return <div className="loading">Chargement...</div>;
+    return (
+      <div className="category-page">
+        <SkeletonLoader type="post" count={6} />
+      </div>
+    );
   }
 
   const backgroundImages = category?.background_images || [];
+  const imageInterval = category?.image_interval || 3000;
 
   return (
     <div className="category-page">
-      <BackgroundSlider images={backgroundImages} interval={5000} blur={true} />
+      <BackgroundSlider images={backgroundImages} interval={imageInterval} blur={true} random={true} />
       <div className="category-content">
         {category && (
           <motion.div

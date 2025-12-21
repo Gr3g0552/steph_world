@@ -31,6 +31,28 @@
   color: rgba(255, 255, 255, 0.8);
 }
 
+.calligraphy-message {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 200px);
+  padding: 4rem 2rem;
+}
+
+.calligraphy-text {
+  font-family: 'Brush Script MT', 'Lucida Handwriting', 'Apple Chancery', 'Zapf Chancery', 'Dancing Script', cursive;
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 400;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.95);
+  text-align: center;
+  line-height: 1.5;
+  text-shadow: 2px 2px 12px rgba(0, 0, 0, 0.7), 0 0 20px rgba(102, 126, 234, 0.3);
+  max-width: 1000px;
+  padding: 2rem;
+  letter-spacing: 0.05em;
+}
+
 .categories-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));

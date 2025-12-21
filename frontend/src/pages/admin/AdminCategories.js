@@ -11,8 +11,10 @@ const AdminCategories = () => {
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
-    background_images: []
+    background_images: [],
+    image_interval: 3000
   });
+  const [newImageUrl, setNewImageUrl] = useState('');
 
   useEffect(() => {
     loadCategories();
@@ -39,7 +41,8 @@ const AdminCategories = () => {
       }
       setShowModal(false);
       setEditingCategory(null);
-      setFormData({ name: '', slug: '', background_images: [] });
+      setFormData({ name: '', slug: '', background_images: [], image_interval: 3000 });
+      setNewImageUrl('');
       loadCategories();
     } catch (error) {
       console.error('Error saving category:', error);
@@ -52,9 +55,27 @@ const AdminCategories = () => {
     setFormData({
       name: category.name,
       slug: category.slug,
-      background_images: category.background_images || []
+      background_images: category.background_images || [],
+      image_interval: category.image_interval || 3000
     });
     setShowModal(true);
+  };
+
+  const handleAddImage = () => {
+    if (newImageUrl.trim()) {
+      setFormData({
+        ...formData,
+        background_images: [...formData.background_images, newImageUrl.trim()]
+      });
+      setNewImageUrl('');
+    }
+  };
+
+  const handleRemoveImage = (index) => {
+    setFormData({
+      ...formData,
+      background_images: formData.background_images.filter((_, i) => i !== index)
+    });
   };
 
   const handleDelete = async (categoryId) => {
@@ -133,6 +154,47 @@ const AdminCategories = () => {
                   onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
                   required
                 />
+              </div>
+              <div className="form-group">
+                <label>Images de Fond (URLs)</label>
+                <div className="image-input-group">
+                  <input
+                    type="text"
+                    value={newImageUrl}
+                    onChange={(e) => setNewImageUrl(e.target.value)}
+                    placeholder="https://exemple.com/image.jpg"
+                    className="image-url-input"
+                  />
+                  <button type="button" onClick={handleAddImage} className="add-image-button">
+                    Ajouter
+                  </button>
+                </div>
+                <div className="images-list">
+                  {formData.background_images.map((url, index) => (
+                    <div key={index} className="image-item">
+                      <img src={url} alt={`Background ${index + 1}`} />
+                      <button
+                        type="button"
+                        className="remove-image-button"
+                        onClick={() => handleRemoveImage(index)}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Intervalle de changement (millisecondes)</label>
+                <input
+                  type="number"
+                  value={formData.image_interval}
+                  onChange={(e) => setFormData({ ...formData, image_interval: parseInt(e.target.value) || 3000 })}
+                  min="1000"
+                  step="1000"
+                  required
+                />
+                <small>Valeur par défaut: 3000ms (3 secondes)</small>
               </div>
               <div className="form-actions">
                 <button type="submit">Enregistrer</button>

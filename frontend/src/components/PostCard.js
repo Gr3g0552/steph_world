@@ -2,18 +2,24 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaHeart, FaComment } from 'react-icons/fa';
+import { useToast } from '../hooks/useToast';
 import api from '../services/api';
 import { truncateText, countWords } from '../utils/wordCount';
+import DoubleTapLike from './DoubleTapLike';
+import SavedPostsButton from './SavedPostsButton';
 import './PostCard.css';
 
 const PostCard = ({ post, onLike }) => {
   const [isLiked, setIsLiked] = useState(post.is_liked || false);
   const [likesCount, setLikesCount] = useState(post.likes_count || 0);
   const [expanded, setExpanded] = useState(false);
+  const { showToast } = useToast();
 
   const handleLike = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     
     try {
       await api.post(`/posts/${post.id}/like`);
@@ -59,13 +65,15 @@ const PostCard = ({ post, onLike }) => {
           </Link>
         </div>
 
-        <div className="post-media">
-          {post.file_type === 'image' ? (
-            <img src={post.file_path} alt={post.title || 'Post'} />
-          ) : (
-            <video src={post.file_path} controls />
-          )}
-        </div>
+        <DoubleTapLike onLike={handleLike}>
+          <div className="post-media">
+            {post.file_type === 'image' ? (
+              <img src={post.file_path} alt={post.title || 'Post'} loading="lazy" />
+            ) : (
+              <video src={post.file_path} controls />
+            )}
+          </div>
+        </DoubleTapLike>
 
         <div className="post-content">
           {post.title && <h3>{post.title}</h3>}
@@ -101,6 +109,7 @@ const PostCard = ({ post, onLike }) => {
               <FaComment />
               <span>{post.comments_count || 0}</span>
             </Link>
+            <SavedPostsButton postId={post.id} />
           </div>
         </div>
       </Link>

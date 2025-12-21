@@ -1,8 +1,10 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import { motion } from 'framer-motion';
 import Header from './components/Header';
+import Footer from './components/Footer';
 
 // User pages
 import HomePage from './pages/HomePage';
@@ -11,6 +13,8 @@ import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
 import CategoryPage from './pages/CategoryPage';
 import PostDetailPage from './pages/PostDetailPage';
+import SearchPage from './pages/SearchPage';
+import SavedPostsPage from './pages/SavedPostsPage';
 
 // Admin pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -45,15 +49,16 @@ const AdminRoute = ({ children }) => {
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <div className="App">
-          <Header />
-          <motion.main
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
+      <ToastProvider>
+        <Router>
+          <div className="App">
+            <Header />
+            <motion.main
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
             <Routes>
               {/* User routes */}
               <Route path="/" element={<HomePage />} />
@@ -71,6 +76,15 @@ function App() {
               <Route path="/category/:categoryId/:subcategoryId" element={<CategoryPage />} />
               <Route path="/post/:id" element={<PostDetailPage />} />
               <Route path="/user/:id" element={<ProfilePage />} />
+              <Route path="/search" element={<SearchPage />} />
+              <Route
+                path="/saved"
+                element={
+                  <PrivateRoute>
+                    <SavedPostsPage />
+                  </PrivateRoute>
+                }
+              />
 
               {/* Admin routes */}
               <Route
@@ -122,9 +136,11 @@ function App() {
                 }
               />
             </Routes>
-          </motion.main>
-        </div>
-      </Router>
+            </motion.main>
+            <Footer />
+          </div>
+        </Router>
+      </ToastProvider>
     </AuthProvider>
   );
 }

@@ -2,18 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './BackgroundSlider.css';
 
-const BackgroundSlider = ({ images = [], interval = 5000, blur = true }) => {
+const BackgroundSlider = ({ images = [], interval = 3000, blur = true, random = true }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
     if (images.length === 0) return;
 
     const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % images.length);
+      if (random && images.length > 1) {
+        // Sélection aléatoire
+        let newIndex;
+        do {
+          newIndex = Math.floor(Math.random() * images.length);
+        } while (newIndex === currentIndex && images.length > 1);
+        setCurrentIndex(newIndex);
+      } else {
+        // Sélection séquentielle
+        setCurrentIndex((prev) => (prev + 1) % images.length);
+      }
     }, interval);
 
     return () => clearInterval(timer);
-  }, [images.length, interval]);
+  }, [images.length, interval, random, currentIndex]);
 
   if (images.length === 0) {
     return null;

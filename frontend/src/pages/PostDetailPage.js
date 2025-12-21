@@ -4,23 +4,25 @@ import { motion } from 'framer-motion';
 import { FaHeart, FaComment } from 'react-icons/fa';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
 import { truncateText, countWords } from '../utils/wordCount';
+import CommentSection from '../components/CommentSection';
+import DoubleTapLike from '../components/DoubleTapLike';
+import SavedPostsButton from '../components/SavedPostsButton';
 import './PostDetailPage.css';
 
 const PostDetailPage = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const [post, setPost] = useState(null);
-  const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [expanded, setExpanded] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     loadPost();
-    loadComments();
   }, [id]);
 
   const loadPost = async () => {
@@ -36,14 +38,6 @@ const PostDetailPage = () => {
     }
   };
 
-  const loadComments = async () => {
-    try {
-      const response = await api.get(`/posts/${id}/comments`);
-      setComments(response.data);
-    } catch (error) {
-      console.error('Error loading comments:', error);
-    }
-  };
 
   const handleLike = async () => {
     if (!user) return;
@@ -52,25 +46,13 @@ const PostDetailPage = () => {
       await api.post(`/posts/${id}/like`);
       setIsLiked(!isLiked);
       setLikesCount(isLiked ? likesCount - 1 : likesCount + 1);
+      showToast(isLiked ? 'Like retiré' : 'Publication aimée', 'success');
     } catch (error) {
       console.error('Error liking post:', error);
+      showToast('Erreur lors du like', 'error');
     }
   };
 
-  const handleComment = async (e) => {
-    e.preventDefault();
-    if (!user || !newComment.trim()) return;
-
-    try {
-      const response = await api.post(`/posts/${id}/comments`, {
-        content: newComment
-      });
-      setComments([...comments, response.data]);
-      setNewComment('');
-    } catch (error) {
-      console.error('Error adding comment:', error);
-    }
-  };
 
   if (loading) {
     return <div className="loading">Chargement...</div>;
@@ -95,13 +77,15 @@ const PostDetailPage = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="post-detail-media">
-          {post.file_type === 'image' ? (
-            <img src={post.file_path} alt={post.title || 'Post'} />
-          ) : (
-            <video src={post.file_path} controls />
-          )}
-        </div>
+        <DoubleTapLike onLike={handleLike}>
+          <div className="post-detail-media">
+            {post.file_type === 'image' ? (
+              <img src={post.file_path} alt={post.title || 'Post'} />
+            ) : (
+              <video src={post.file_path} controls />
+            )}
+          </div>
+        </DoubleTapLike>
 
         <div className="post-detail-content">
           <div className="post-detail-header">
@@ -147,51 +131,14 @@ const PostDetailPage = () => {
             </motion.button>
             <div className="comment-count">
               <FaComment />
-              <span>{comments.length}</span>
+              <span>{post.comments_count || 0}</span>
             </div>
+            <SavedPostsButton postId={id} />
           </div>
 
-          <div className="comments-section">
-            <h3>Commentaires</h3>
-            {user && (
-              <form onSubmit={handleComment} className="comment-form">
-                <input
-                  type="text"
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Ajouter un commentaire..."
-                  maxLength={1000}
-                />
-                <button type="submit">Publier</button>
-              </form>
-            )}
-            <div className="comments-list">
-              {comments.map((comment) => (
-                <motion.div
-                  key={comment.id}
-                  className="comment-item"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                >
-                  <Link to={`/user/${comment.user_id}`} className="comment-user">
-                    <img
-                      src={comment.profile_image || 'https://via.placeholder.com/32'}
-                      alt={comment.username}
-                      className="comment-avatar"
-                      onError={(e) => {
-                        e.target.src = 'https://via.placeholder.com/32';
-                      }}
-                    />
-                    <span>{comment.username}</span>
-                  </Link>
-                  <p>{comment.content}</p>
-                </motion.div>
-              ))}
-              {comments.length === 0 && (
-                <p className="no-comments">Aucun commentaire pour le moment</p>
-              )}
-            </div>
-          </div>
+          <CommentSection postId={id} onCommentAdded={() => {
+            loadPost();
+          }} />
         </div>
       </motion.div>
     </div>
@@ -199,4 +146,6 @@ const PostDetailPage = () => {
 };
 
 export default PostDetailPage;
+
+
 

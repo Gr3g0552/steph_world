@@ -1,0 +1,32 @@
+.saved-button {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  font-size: 1.25rem;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.saved-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.saved-button.saved {
+  color: #ffd700;
+}
+
+.saved-button.saved:hover {
+  color: #ffed4e;
+}
+
+.saved-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+

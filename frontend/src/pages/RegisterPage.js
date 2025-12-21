@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useToast } from '../hooks/useToast';
 import api from '../services/api';
 import './AuthPage.css';
 
@@ -12,6 +13,7 @@ const RegisterPage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -33,11 +35,14 @@ const RegisterPage = () => {
     try {
       await api.post('/auth/register', { email, username, password });
       setSuccess(true);
+      showToast('Inscription réussie ! Votre compte est en attente d\'approbation.', 'success');
       setTimeout(() => {
         navigate('/login');
       }, 2000);
     } catch (err) {
-      setError(err.response?.data?.error || 'Erreur lors de l\'inscription');
+      const errorMsg = err.response?.data?.error || 'Erreur lors de l\'inscription';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
     } finally {
       setLoading(false);
     }

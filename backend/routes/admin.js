@@ -130,12 +130,13 @@ router.post('/categories', [
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const { name, slug, background_images } = req.body;
+        const { name, slug, background_images, image_interval } = req.body;
         const bgImagesJson = background_images ? JSON.stringify(background_images) : '[]';
+        const interval = image_interval || 3000;
 
         const result = await db.promise.run(
-            'INSERT INTO categories (name, slug, background_images) VALUES (?, ?, ?)',
-            [name, slug, bgImagesJson]
+            'INSERT INTO categories (name, slug, background_images, image_interval) VALUES (?, ?, ?, ?)',
+            [name, slug, bgImagesJson, interval]
         );
 
         const category = await db.promise.get('SELECT * FROM categories WHERE id = ?', [result.lastID]);
@@ -162,7 +163,7 @@ router.put('/categories/:id', [
         }
 
         const categoryId = parseInt(req.params.id);
-        const { name, slug, background_images } = req.body;
+        const { name, slug, background_images, image_interval } = req.body;
         const updates = [];
         const values = [];
 
@@ -179,6 +180,11 @@ router.put('/categories/:id', [
         if (background_images !== undefined) {
             updates.push('background_images = ?');
             values.push(JSON.stringify(background_images));
+        }
+
+        if (image_interval !== undefined) {
+            updates.push('image_interval = ?');
+            values.push(image_interval);
         }
 
         if (updates.length === 0) {

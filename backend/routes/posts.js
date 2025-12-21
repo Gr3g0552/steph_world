@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const db = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { uploadLimiter, commentLimiter, validateFile, validateInput } = require('../middleware/security');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -26,7 +27,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+    limits: { fileSize: 200 * 1024 * 1024 }, // 200MB
     fileFilter: (req, file, cb) => {
         const allowedTypes = /jpeg|jpg|png|gif|mp4|mov|avi|webm/;
         const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -40,12 +41,12 @@ const upload = multer({
 });
 
 // Create post
-router.post('/', authenticateToken, upload.single('file'), [
-    body('title').optional().trim().isLength({ max: 200 }),
-    body('description').optional().isLength({ max: 2000 }),
-    body('category_id').isInt(),
-    body('subcategory_id').optional().isInt()
-], async (req, res) => {
+router.post('/', authenticateToken, uploadLimiter, upload.single('file'), validateFile, [
+    body('title').optional().trim().isLength({ max: 200 }).escape(),
+    body('description').optional().isLength({ max: 2000 }).escape(),
+    body('category_id').isInt({ min: 1 }),
+    body('subcategory_id').optional().isInt({ min: 1 })
+], validateInput, async (req, res) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -259,12 +260,14 @@ router.get('/:id/comments', authenticateToken, async (req, res) => {
     try {
         const postId = parseInt(req.params.id);
         const comments = await db.promise.all(
-            `SELECT c.*, u.username, u.profile_image
+            `SELECT c.*, u.username, u.profile_image,
+             (SELECT COUNT(*) FROM comment_likes WHERE comment_id = c.id) as likes_count,
+             EXISTS(SELECT 1 FROM comment_likes WHERE comment_id = c.id AND user_id = ?) as is_liked
              FROM comments c
              JOIN users u ON c.user_id = u.id
              WHERE c.post_id = ? AND u.is_approved = 1
              ORDER BY c.created_at ASC`,
-            [postId]
+            [req.user.id, postId]
         );
         res.json(comments);
     } catch (error) {
@@ -274,29 +277,33 @@ router.get('/:id/comments', authenticateToken, async (req, res) => {
 });
 
 // Add comment
-router.post('/:id/comments', authenticateToken, [
-    body('content').trim().isLength({ min: 1, max: 1000 })
-], async (req, res) => {
+router.post('/:id/comments', authenticateToken, commentLimiter, [
+    body('content').trim().isLength({ min: 1, max: 1000 }).escape(),
+    body('parent_id').optional().isInt({ min: 1 })
+], validateInput, async (req, res) => {
     try {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
-        }
-
         const postId = parseInt(req.params.id);
-        const { content } = req.body;
+        const { content, parent_id } = req.body;
 
         const result = await db.promise.run(
-            'INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)',
-            [postId, req.user.id, content]
+            'INSERT INTO comments (post_id, user_id, content, parent_id) VALUES (?, ?, ?, ?)',
+            [postId, req.user.id, content, parent_id || null]
+        );
+
+        // Update comments count
+        await db.promise.run(
+            'UPDATE posts SET comments_count = comments_count + 1 WHERE id = ?',
+            [postId]
         );
 
         const comment = await db.promise.get(
-            `SELECT c.*, u.username, u.profile_image
+            `SELECT c.*, u.username, u.profile_image,
+             (SELECT COUNT(*) FROM comment_likes WHERE comment_id = c.id) as likes_count,
+             EXISTS(SELECT 1 FROM comment_likes WHERE comment_id = c.id AND user_id = ?) as is_liked
              FROM comments c
              JOIN users u ON c.user_id = u.id
              WHERE c.id = ?`,
-            [result.lastID]
+            [req.user.id, result.lastID]
         );
 
         res.status(201).json(comment);

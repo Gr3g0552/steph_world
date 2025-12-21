@@ -7,6 +7,7 @@ const AdminHomepageSettings = () => {
   const [settings, setSettings] = useState(null);
   const [backgroundImages, setBackgroundImages] = useState([]);
   const [newImageUrl, setNewImageUrl] = useState('');
+  const [imageInterval, setImageInterval] = useState(3000);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -19,6 +20,7 @@ const AdminHomepageSettings = () => {
       const response = await api.get('/homepage');
       setSettings(response.data);
       setBackgroundImages(response.data.background_images || []);
+      setImageInterval(response.data.image_interval || 3000);
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -40,7 +42,10 @@ const AdminHomepageSettings = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await api.put('/homepage', { background_images: backgroundImages });
+      await api.put('/homepage', {
+        background_images: backgroundImages,
+        image_interval: imageInterval
+      });
       alert('Paramètres sauvegardés avec succès');
     } catch (error) {
       console.error('Error saving settings:', error);
@@ -102,6 +107,21 @@ const AdminHomepageSettings = () => {
           {backgroundImages.length === 0 && (
             <p className="empty-state">Aucune image ajoutée</p>
           )}
+
+          <div className="form-group" style={{ marginTop: '2rem' }}>
+            <label>Intervalle de changement (millisecondes)</label>
+            <input
+              type="number"
+              value={imageInterval}
+              onChange={(e) => setImageInterval(parseInt(e.target.value) || 3000)}
+              min="1000"
+              step="1000"
+              className="image-url-input"
+            />
+            <small style={{ color: 'rgba(255, 255, 255, 0.6)', display: 'block', marginTop: '0.5rem' }}>
+              Valeur par défaut: 3000ms (3 secondes)
+            </small>
+          </div>
 
           <button
             onClick={handleSave}

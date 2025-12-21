@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
+import HamburgerMenu from './HamburgerMenu';
 import './Header.css';
 
 const Header = () => {
@@ -43,6 +44,7 @@ const Header = () => {
         </Link>
 
         <nav className="nav">
+          <HamburgerMenu />
           {user ? (
             <>
               {user.role === 'admin' && (

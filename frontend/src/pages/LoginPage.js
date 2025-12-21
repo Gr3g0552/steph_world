@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
 import api from '../services/api';
 import './AuthPage.css';
 
@@ -11,6 +12,7 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -20,6 +22,7 @@ const LoginPage = () => {
 
     try {
       const user = await login(email, password);
+      showToast('Connexion réussie', 'success');
       // Redirect based on role
       if (user.role === 'admin') {
         navigate('/admin');
@@ -27,7 +30,9 @@ const LoginPage = () => {
         navigate('/');
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Erreur de connexion');
+      const errorMsg = err.response?.data?.error || 'Erreur de connexion';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
     } finally {
       setLoading(false);
     }

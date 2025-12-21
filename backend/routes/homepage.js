@@ -14,10 +14,10 @@ router.get('/', authenticateToken, async (req, res) => {
         if (!settings) {
             // Initialize if not exists
             await db.promise.run(
-                'INSERT INTO homepage_settings (id, background_images) VALUES (1, ?)',
-                ['[]']
+                'INSERT INTO homepage_settings (id, background_images, image_interval) VALUES (1, ?, ?)',
+                ['[]', 3000]
             );
-            return res.json({ background_images: [] });
+            return res.json({ background_images: [], image_interval: 3000 });
         }
 
         if (settings.background_images) {
@@ -40,14 +40,15 @@ router.get('/', authenticateToken, async (req, res) => {
 // Update homepage settings (admin only)
 router.put('/', authenticateToken, requireAdmin, async (req, res) => {
     try {
-        const { background_images } = req.body;
+        const { background_images, image_interval } = req.body;
         const bgImagesJson = background_images ? JSON.stringify(background_images) : '[]';
+        const interval = image_interval || 3000;
 
         await db.promise.run(
             `UPDATE homepage_settings 
-             SET background_images = ?, updated_at = CURRENT_TIMESTAMP 
+             SET background_images = ?, image_interval = ?, updated_at = CURRENT_TIMESTAMP 
              WHERE id = 1`,
-            [bgImagesJson]
+            [bgImagesJson, interval]
         );
 
         const settings = await db.promise.get('SELECT * FROM homepage_settings WHERE id = 1');

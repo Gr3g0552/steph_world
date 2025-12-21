@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const db = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { authLimiter, validateInput } = require('../middleware/security');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key_change_in_production';
@@ -53,10 +54,10 @@ router.post('/register', [
 });
 
 // Login
-router.post('/login', [
+router.post('/login', authLimiter, [
     body('email').isEmail(),
     body('password').notEmpty()
-], async (req, res) => {
+], validateInput, async (req, res) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useToast } from '../hooks/useToast';
 import api from '../services/api';
 import { isValidDescription, countWords } from '../utils/wordCount';
 import './CreatePostModal.css';
@@ -15,13 +16,24 @@ const CreatePostModal = ({ isOpen, onClose, categories, onPostCreated }) => {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { showToast } = useToast();
 
   const selectedCategory = categories.find(c => c.id === parseInt(formData.category_id));
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Vérifier la taille (200MB)
+      const maxSize = 200 * 1024 * 1024; // 200MB en bytes
+      if (file.size > maxSize) {
+        const errorMsg = 'Le fichier est trop volumineux. Taille maximale: 200MB';
+        setError(errorMsg);
+        showToast(errorMsg, 'error');
+        e.target.value = ''; // Réinitialiser l'input
+        return;
+      }
       setFormData({ ...formData, file });
+      setError('');
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result);
@@ -70,10 +82,13 @@ const CreatePostModal = ({ isOpen, onClose, categories, onPostCreated }) => {
         file: null
       });
       setPreview(null);
+      showToast('Publication créée avec succès', 'success');
       onPostCreated();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.error || 'Erreur lors de la publication');
+      const errorMsg = err.response?.data?.error || 'Erreur lors de la publication';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
     } finally {
       setLoading(false);
     }
