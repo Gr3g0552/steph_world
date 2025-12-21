@@ -9,7 +9,18 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'"],
+            imgSrc: ["'self'", "data:", "https:", "http:"],
+            connectSrc: ["'self'"],
+        },
+    },
+    crossOriginEmbedderPolicy: false
+}));
 app.use(cors({
     origin: process.env.NODE_ENV === 'production' 
         ? ['http://localhost:3000'] 
@@ -19,20 +30,39 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Rate limiting
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100 // limit each IP to 100 requests per windowMs
+// Enhanced rate limiting
+const { strictLimiter, sanitizeBody, validateId, checkAdminBypass } = require('./middleware/security');
+// Check admin status and apply rate limiting
+app.use('/api/', (req, res, next) => {
+  // Skip rate limiting for login route (has its own authLimiter)
+  if ((req.path === '/auth/login' || req.originalUrl === '/api/auth/login') && req.method === 'POST') {
+    return next();
+  }
+  
+  // Check if user is admin and bypass rate limiting completely
+  checkAdminBypass(req, res, () => {
+    if (req.skipRateLimit === true) {
+      // Admin user - skip rate limiting entirely
+      return next();
+    }
+    // Regular user - apply rate limiting
+    strictLimiter(req, res, next);
+  });
 });
-app.use('/api/', limiter);
+app.use(sanitizeBody);
+app.use(validateId);
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/posts', require('./routes/posts'));
+app.use('/api/comments', require('./routes/comments'));
+app.use('/api/saved', require('./routes/saved'));
+app.use('/api/follows', require('./routes/follows'));
 app.use('/api/categories', require('./routes/categories'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/homepage', require('./routes/homepage'));
+app.use('/api/search', require('./routes/search'));
 
 // Health check
 app.get('/api/health', (req, res) => {

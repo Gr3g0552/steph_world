@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
 import api from '../services/api';
 import PostCard from '../components/PostCard';
+import FollowButton from '../components/FollowButton';
 import './ProfilePage.css';
 
 const ProfilePage = () => {
@@ -13,12 +15,15 @@ const ProfilePage = () => {
   const [user, setUser] = useState(null);
   const [posts, setPosts] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const [formData, setFormData] = useState({
     username: '',
     description: '',
     profile_image: ''
   });
   const [loading, setLoading] = useState(true);
+  const { showToast } = useToast();
 
   const userId = id || currentUser?.id;
   const isOwnProfile = !id || currentUser?.id === parseInt(id);
@@ -39,6 +44,18 @@ const ProfilePage = () => {
         description: response.data.description || '',
         profile_image: response.data.profile_image || ''
       });
+      
+      // Load follow stats
+      try {
+        const [followersRes, followingRes] = await Promise.all([
+          api.get(`/follows/${userId}/followers`),
+          api.get(`/follows/${userId}/following`)
+        ]);
+        setFollowersCount(followersRes.data.length);
+        setFollowingCount(followingRes.data.length);
+      } catch (error) {
+        console.error('Error loading follow stats:', error);
+      }
     } catch (error) {
       console.error('Error loading user:', error);
     } finally {
@@ -64,9 +81,11 @@ const ProfilePage = () => {
         const updatedUser = { ...currentUser, ...formData };
         localStorage.setItem('user', JSON.stringify(updatedUser));
       }
+      showToast('Profil mis à jour avec succès', 'success');
     } catch (error) {
       console.error('Error updating profile:', error);
-      alert('Erreur lors de la mise à jour du profil');
+      const errorMsg = error.response?.data?.error || 'Erreur lors de la mise à jour du profil';
+      showToast(errorMsg, 'error');
     }
   };
 
@@ -125,15 +144,33 @@ const ProfilePage = () => {
             ) : (
               <>
                 {user.description && <p className="profile-description">{user.description}</p>}
-                {isOwnProfile && (
+                {isOwnProfile ? (
                   <button className="edit-button" onClick={() => setIsEditing(true)}>
                     Modifier le profil
                   </button>
+                ) : (
+                  <FollowButton userId={userId} onFollowChange={loadUser} />
                 )}
               </>
             )}
             <div className="profile-stats">
-              <span>{posts.length} publications</span>
+              <div className="stat-item">
+                <span className="stat-number">{posts.length}</span>
+                <span className="stat-label">Publications</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-number">{followersCount}</span>
+                <span className="stat-label">Abonnés</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-number">{followingCount}</span>
+                <span className="stat-label">Abonnements</span>
+              </div>
+              {isOwnProfile && (
+                <Link to="/saved" className="saved-link">
+                  Publications sauvegardées
+                </Link>
+              )}
             </div>
           </div>
         </div>

@@ -25,7 +25,30 @@ router.get('/:id', authenticateToken, async (req, res) => {
             [userId]
         );
 
-        res.json({ ...user, postsCount: postsCount.count });
+        // Get follow stats (handle missing table gracefully)
+        let followersCount = { count: 0 };
+        let followingCount = { count: 0 };
+        try {
+            followersCount = await db.promise.get(
+                'SELECT COUNT(*) as count FROM follows WHERE following_id = ?',
+                [userId]
+            ) || { count: 0 };
+            
+            followingCount = await db.promise.get(
+                'SELECT COUNT(*) as count FROM follows WHERE follower_id = ?',
+                [userId]
+            ) || { count: 0 };
+        } catch (error) {
+            // If follows table doesn't exist, use default values
+            console.warn('Follows table not available, using default values');
+        }
+
+        res.json({
+            ...user,
+            postsCount: postsCount.count,
+            followersCount: followersCount.count,
+            followingCount: followingCount.count
+        });
     } catch (error) {
         console.error('Get user error:', error);
         res.status(500).json({ error: 'Failed to get user' });
