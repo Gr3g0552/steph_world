@@ -54,7 +54,7 @@ router.post('/register', [
 
 // Login
 router.post('/login', [
-    body('email').isEmail().normalizeEmail(),
+    body('email').isEmail(),
     body('password').notEmpty()
 ], async (req, res) => {
     try {
@@ -63,27 +63,49 @@ router.post('/login', [
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const { email, password } = req.body;
+        let { email, password } = req.body;
+        // Normalize email manually (lowercase, trim) - don't use normalizeEmail() as it removes dots
+        email = email.toLowerCase().trim();
 
-        // Find user
-        const user = await db.promise.get(
+        // Find user - try exact match first, then try without dots (Gmail normalization)
+        let user = await db.promise.get(
             'SELECT id, email, username, password_hash, role, is_approved FROM users WHERE email = ?',
             [email]
         );
+        
+        // If not found and email contains dots, try without dots (Gmail treats dots as same)
+        if (!user && email.includes('.')) {
+            const emailWithoutDots = email.replace(/\./g, '');
+            user = await db.promise.get(
+                'SELECT id, email, username, password_hash, role, is_approved FROM users WHERE REPLACE(email, ".", "") = ?',
+                [emailWithoutDots]
+            );
+        }
 
         if (!user) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        // Check if approved (admin bypass)
-        if (!user.is_approved && user.role !== 'admin') {
-            return res.status(403).json({ error: 'Account pending approval' });
-        }
-
-        // Verify password
+        // Verify password first
         const isValid = await bcrypt.compare(password, user.password_hash);
         if (!isValid) {
             return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        // Check if approved (admin bypass)
+        // SQLite stores booleans as integers (0 or 1)
+        // Admin role bypasses approval check
+        console.log('Login attempt - Role:', user.role, 'Is approved:', user.is_approved);
+        if (user.role === 'admin') {
+            console.log('Admin login - bypassing approval check');
+            // Admin can always login
+        } else {
+            console.log('Non-admin login - checking approval');
+            const isApproved = user.is_approved === 1 || user.is_approved === true || user.is_approved === '1';
+            if (!isApproved) {
+                console.log('Account not approved');
+                return res.status(403).json({ error: 'Account pending approval' });
+            }
         }
 
         // Generate JWT
