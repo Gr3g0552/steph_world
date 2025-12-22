@@ -59,10 +59,14 @@ const CommentSection = ({ postId, onCommentAdded }) => {
     if (!newComment.trim() || !user) return;
 
     try {
-      const response = await api.post(`/posts/${postId}/comments`, {
-        content: newComment,
-        parent_id: replyingTo
-      });
+      const payload = {
+        content: newComment
+      };
+      // Only include parent_id if replyingTo is set
+      if (replyingTo) {
+        payload.parent_id = replyingTo;
+      }
+      const response = await api.post(`/posts/${postId}/comments`, payload);
       
       showToast('Commentaire ajouté', 'success');
       setNewComment('');
@@ -86,12 +90,31 @@ const CommentSection = ({ postId, onCommentAdded }) => {
   };
 
   const handleEdit = async (commentId) => {
+    if (!editContent.trim()) {
+      showToast('Le commentaire ne peut pas être vide', 'error');
+      return;
+    }
+    
     try {
       await api.put(`/comments/${commentId}`, { content: editContent });
       showToast('Commentaire modifié', 'success');
       setEditingId(null);
       setEditContent('');
-      loadComments();
+      // Update the comment in the local state instead of reloading all comments
+      setComments(prevComments => {
+        const updateComment = (comments) => {
+          return comments.map(comment => {
+            if (comment.id === commentId) {
+              return { ...comment, content: editContent };
+            }
+            if (comment.replies && comment.replies.length > 0) {
+              return { ...comment, replies: updateComment(comment.replies) };
+            }
+            return comment;
+          });
+        };
+        return updateComment(prevComments);
+      });
     } catch (error) {
       showToast('Erreur lors de la modification', 'error');
     }
@@ -111,6 +134,8 @@ const CommentSection = ({ postId, onCommentAdded }) => {
 
   const CommentItem = ({ comment, depth = 0 }) => {
     const isOwner = user && user.id === comment.user_id;
+    const isAdmin = user && user.role === 'admin';
+    const canEdit = isOwner || isAdmin; // Owner or admin can edit
     const isEditing = editingId === comment.id;
 
     return (
@@ -131,7 +156,7 @@ const CommentSection = ({ postId, onCommentAdded }) => {
             />
             <span className="comment-username">{comment.username}</span>
           </Link>
-          {isOwner && (
+          {canEdit && (
             <div className="comment-menu">
               <button
                 className="comment-menu-button"
@@ -148,12 +173,14 @@ const CommentSection = ({ postId, onCommentAdded }) => {
                   }}>
                     <FaEdit /> Modifier
                   </button>
-                  <button onClick={() => {
-                    handleDelete(comment.id);
-                    setShowMenu(null);
-                  }}>
-                    <FaTrash /> Supprimer
-                  </button>
+                  {(isOwner || isAdmin) && (
+                    <button onClick={() => {
+                      handleDelete(comment.id);
+                      setShowMenu(null);
+                    }}>
+                      <FaTrash /> Supprimer
+                    </button>
+                  )}
                 </div>
               )}
             </div>

@@ -17,7 +17,7 @@ COPY . .
 # Copier le script d'initialisation de la base de données (sera copié avec COPY . .)
 
 # Exposer le port
-EXPOSE 5000
+EXPOSE 6000
 
 # Commande par défaut
 CMD ["npm", "start"]

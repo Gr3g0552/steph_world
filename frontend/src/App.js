@@ -17,6 +17,7 @@ import CategoryPage from './pages/CategoryPage';
 import PostDetailPage from './pages/PostDetailPage';
 import SearchPage from './pages/SearchPage';
 import SavedPostsPage from './pages/SavedPostsPage';
+import SectionsPage from './pages/SectionsPage';
 
 // Admin pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -76,6 +77,7 @@ function App() {
                   </PrivateRoute>
                 }
               />
+              <Route path="/sections" element={<SectionsPage />} />
               <Route path="/category/:categoryId" element={<CategoryPage />} />
               <Route path="/category/:categoryId/:subcategoryId" element={<CategoryPage />} />
               <Route path="/post/:id" element={<PostDetailPage />} />

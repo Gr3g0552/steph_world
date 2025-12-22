@@ -128,18 +128,33 @@ const AdminDashboard = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 + index * 0.1 }}
             >
-              <Link
-                to={item.path}
-                className={`admin-menu-item ${item.highlight ? 'highlight' : ''}`}
-              >
-                <span className="menu-icon">{item.icon}</span>
-                <div className="menu-content">
-                  <span className="menu-title">{item.title}</span>
-                  {item.count !== undefined && item.count > 0 && (
-                    <span className="menu-badge">{item.count}</span>
-                  )}
-                </div>
-              </Link>
+              {item.external ? (
+                <a
+                  href={item.path}
+                  className={`admin-menu-item ${item.highlight ? 'highlight' : ''}`}
+                >
+                  <span className="menu-icon">{item.icon}</span>
+                  <div className="menu-content">
+                    <span className="menu-title">{item.title}</span>
+                    {item.count !== undefined && item.count > 0 && (
+                      <span className="menu-badge">{item.count}</span>
+                    )}
+                  </div>
+                </a>
+              ) : (
+                <Link
+                  to={item.path}
+                  className={`admin-menu-item ${item.highlight ? 'highlight' : ''}`}
+                >
+                  <span className="menu-icon">{item.icon}</span>
+                  <div className="menu-content">
+                    <span className="menu-title">{item.title}</span>
+                    {item.count !== undefined && item.count > 0 && (
+                      <span className="menu-badge">{item.count}</span>
+                    )}
+                  </div>
+                </Link>
+              )}
             </motion.div>
           ))}
         </div>

@@ -22,7 +22,14 @@ const HomePage = () => {
       setCategories(categoriesRes.data);
       setHomepageSettings(settingsRes.data);
     } catch (error) {
-      console.error('Error loading data:', error);
+      // Silently handle 401 errors on public pages - user just needs to login
+      if (error.response && error.response.status === 401) {
+        // User not authenticated - this is OK for public pages
+        setCategories([]);
+        setHomepageSettings({ background_images: [], image_interval: 3000 });
+      } else {
+        console.error('Error loading data:', error);
+      }
     } finally {
       setLoading(false);
     }

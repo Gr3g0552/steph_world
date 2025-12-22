@@ -53,9 +53,27 @@ export const AuthProvider = ({ children }) => {
           setUser(user);
           return user;
         }
+        throw new Error('Réponse invalide du serveur');
       }
+      throw new Error('Réponse invalide du serveur');
     } catch (error) {
-      throw error;
+      // Improve error message for better user experience
+      if (error.response && error.response.data && error.response.data.error) {
+        const errorMessage = error.response.data.error;
+        if (errorMessage === 'Account pending approval') {
+          throw new Error('Votre compte est en attente d\'approbation par un administrateur');
+        } else if (errorMessage === 'Invalid credentials') {
+          throw new Error('Email ou mot de passe incorrect');
+        } else {
+          throw new Error(errorMessage);
+        }
+      } else if (error.message) {
+        throw error;
+      } else if (error.request) {
+        throw new Error('Impossible de se connecter au serveur. Vérifiez votre connexion internet.');
+      } else {
+        throw new Error('Erreur de connexion. Veuillez réessayer.');
+      }
     }
   };
 

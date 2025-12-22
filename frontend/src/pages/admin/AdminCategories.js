@@ -15,6 +15,7 @@ const AdminCategories = () => {
     image_interval: 3000
   });
   const [newImageUrl, setNewImageUrl] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     loadCategories();
@@ -76,6 +77,47 @@ const AdminCategories = () => {
       ...formData,
       background_images: formData.background_images.filter((_, i) => i !== index)
     });
+  };
+
+  const handleUploadImage = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!editingCategory) {
+      alert('Veuillez d\'abord créer ou modifier une catégorie pour télécharger des images');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await api.post(
+        `/admin/categories/${editingCategory.id}/background-image`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+
+      // Update formData with the new image URL
+      setFormData({
+        ...formData,
+        background_images: [...formData.background_images, response.data.imageUrl]
+      });
+
+      alert('Image téléchargée avec succès');
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Erreur lors du téléchargement de l\'image');
+    } finally {
+      setUploadingImage(false);
+      // Reset file input
+      e.target.value = '';
+    }
   };
 
   const handleDelete = async (categoryId) => {
@@ -156,7 +198,38 @@ const AdminCategories = () => {
                 />
               </div>
               <div className="form-group">
-                <label>Images de Fond (URLs)</label>
+                <label>Images de Fond</label>
+                <p className="settings-description" style={{ marginBottom: '1rem', fontSize: '0.875rem' }}>
+                  Vous pouvez ajouter des images via URL ou télécharger directement depuis votre ordinateur.
+                  Les images téléchargées seront stockées sur le serveur pour éviter les erreurs de chargement.
+                </p>
+                
+                {/* Upload file option - only when editing existing category */}
+                {editingCategory && (
+                  <div className="image-input-group" style={{ marginBottom: '1rem' }}>
+                    <label className="upload-button" style={{ 
+                      padding: '0.75rem 1.5rem',
+                      background: 'rgba(102, 126, 234, 0.2)',
+                      color: '#667eea',
+                      border: '1px solid rgba(102, 126, 234, 0.5)',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      display: 'inline-block',
+                      textAlign: 'center'
+                    }}>
+                      {uploadingImage ? 'Téléchargement...' : '📤 Télécharger une image'}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                        onChange={handleUploadImage}
+                        disabled={uploadingImage}
+                        style={{ display: 'none' }}
+                      />
+                    </label>
+                  </div>
+                )}
+
+                {/* URL input option */}
                 <div className="image-input-group">
                   <input
                     type="text"
@@ -166,7 +239,7 @@ const AdminCategories = () => {
                     className="image-url-input"
                   />
                   <button type="button" onClick={handleAddImage} className="add-image-button">
-                    Ajouter
+                    Ajouter URL
                   </button>
                 </div>
                 <div className="images-list">

@@ -7,6 +7,7 @@ const router = express.Router();
 // Get saved posts
 router.get('/', authenticateToken, async (req, res) => {
     try {
+        const { decodeHtmlEntities } = require('../middleware/security');
         const savedPosts = await db.promise.all(
             `SELECT p.*, u.username, u.profile_image,
                     (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes_count,
@@ -19,7 +20,15 @@ router.get('/', authenticateToken, async (req, res) => {
              ORDER BY sp.created_at DESC`,
             [req.user.id, req.user.id]
         );
-        res.json(savedPosts);
+        
+        // Decode HTML entities in post titles and descriptions
+        const decodedPosts = savedPosts.map(post => ({
+            ...post,
+            title: post.title ? decodeHtmlEntities(post.title) : post.title,
+            description: post.description ? decodeHtmlEntities(post.description) : post.description
+        }));
+        
+        res.json(decodedPosts);
     } catch (error) {
         console.error('Get saved posts error:', error);
         res.status(500).json({ error: 'Failed to get saved posts' });

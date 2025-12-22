@@ -35,8 +35,17 @@ router.get('/posts', authenticateToken, async (req, res) => {
         query += ' ORDER BY p.created_at DESC LIMIT ? OFFSET ?';
         params.push(parseInt(limit), parseInt(offset));
 
+        const { decodeHtmlEntities } = require('../middleware/security');
         const posts = await db.promise.all(query, params);
-        res.json(posts);
+        
+        // Decode HTML entities in post titles and descriptions
+        const decodedPosts = posts.map(post => ({
+            ...post,
+            title: post.title ? decodeHtmlEntities(post.title) : post.title,
+            description: post.description ? decodeHtmlEntities(post.description) : post.description
+        }));
+        
+        res.json(decodedPosts);
     } catch (error) {
         console.error('Search posts error:', error);
         res.status(500).json({ error: 'Failed to search posts' });

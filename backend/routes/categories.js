@@ -4,8 +4,8 @@ const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Get all categories with subcategories
-router.get('/', authenticateToken, async (req, res) => {
+// Get all categories with subcategories (public route)
+router.get('/', async (req, res) => {
     try {
         const categories = await db.promise.all(
             'SELECT * FROM categories ORDER BY id ASC'
@@ -41,8 +41,8 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 });
 
-// Get single category
-router.get('/:id', authenticateToken, async (req, res) => {
+// Get single category (public route)
+router.get('/:id', async (req, res) => {
     try {
         const categoryId = parseInt(req.params.id);
         const category = await db.promise.get(

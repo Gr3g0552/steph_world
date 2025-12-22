@@ -28,7 +28,8 @@
 
 .hero-section p {
   font-size: 1.25rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: #ffffff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .calligraphy-message {
@@ -61,13 +62,14 @@
 }
 
 .category-card {
-  background: rgba(26, 26, 26, 0.8);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(26, 26, 26, 0.95);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 16px;
   padding: 2rem;
   cursor: pointer;
   transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .category-card:hover {
@@ -95,9 +97,92 @@
 .subcategory-tag {
   background: rgba(102, 126, 234, 0.2);
   color: #667eea;
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
   font-size: 0.875rem;
+}
+
+/* Responsive Styles */
+/* Mobile devices (portrait) */
+@media (max-width: 767px) {
+  .homepage {
+    padding: 1rem;
+  }
+
+  .hero-section {
+    padding: 2rem 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .hero-section h1 {
+    font-size: 2rem;
+  }
+
+  .hero-section p {
+    font-size: 1rem;
+  }
+
+  .calligraphy-message {
+    padding: 2rem 1rem;
+    min-height: auto;
+  }
+
+  .calligraphy-text {
+    font-size: clamp(1.5rem, 6vw, 2.5rem);
+    padding: 1rem;
+  }
+
+  .categories-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+  }
+
+  .category-card {
+    padding: 1.5rem;
+  }
+
+  .category-card h2 {
+    font-size: 1.5rem;
+  }
+}
+
+/* Tablet devices (portrait and landscape) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .homepage {
+    padding: 1.5rem;
+  }
+
+  .hero-section {
+    padding: 3rem 1.5rem;
+    margin-bottom: 3rem;
+  }
+
+  .hero-section h1 {
+    font-size: 2.5rem;
+  }
+
+  .categories-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.75rem;
+  }
+}
+
+/* Landscape orientation on mobile/tablet */
+@media (orientation: landscape) and (max-height: 600px) {
+  .hero-section {
+    padding: 1.5rem 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero-section h1 {
+    font-size: 1.75rem;
+  }
+
+  .calligraphy-message {
+    padding: 1rem;
+    min-height: auto;
+  }
 }
 
 .loading {

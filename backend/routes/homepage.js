@@ -4,8 +4,8 @@ const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Get homepage settings
-router.get('/', authenticateToken, async (req, res) => {
+// Get homepage settings (public route)
+router.get('/', async (req, res) => {
     try {
         const settings = await db.promise.get(
             'SELECT * FROM homepage_settings WHERE id = 1'

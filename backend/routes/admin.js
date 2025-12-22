@@ -2,8 +2,42 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const db = require('../config/database');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 const router = express.Router();
+
+// Configure multer for background image uploads
+const backgroundImagesDir = process.env.UPLOAD_PATH || path.join(__dirname, '../../frontend/public/uploads/backgrounds');
+if (!fs.existsSync(backgroundImagesDir)) {
+    fs.mkdirSync(backgroundImagesDir, { recursive: true });
+}
+
+const backgroundStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, backgroundImagesDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'bg-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const backgroundUpload = multer({
+    storage: backgroundStorage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB for background images
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = /jpeg|jpg|png|gif|webp/;
+        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
+        if (extname && mimetype) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type. Only images are allowed.'));
+        }
+    }
+});
 
 // All admin routes require authentication and admin role
 router.use(authenticateToken);
@@ -206,6 +240,64 @@ router.put('/categories/:id', [
     }
 });
 
+// Upload background image for category
+router.post('/categories/:id/background-image', backgroundUpload.single('image'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No image file provided' });
+        }
+
+        const categoryId = parseInt(req.params.id);
+        const category = await db.promise.get('SELECT background_images FROM categories WHERE id = ?', [categoryId]);
+        
+        if (!category) {
+            // Delete uploaded file if category doesn't exist
+            fs.unlinkSync(req.file.path);
+            return res.status(404).json({ error: 'Category not found' });
+        }
+
+        // Get the relative path for the frontend
+        const relativePath = `/uploads/backgrounds/${req.file.filename}`;
+        const imageUrl = `http://localhost:3000${relativePath}`;
+
+        // Parse existing background images
+        let backgroundImages = [];
+        if (category.background_images) {
+            try {
+                backgroundImages = JSON.parse(category.background_images);
+            } catch (e) {
+                backgroundImages = [];
+            }
+        }
+
+        // Add new image to the array
+        backgroundImages.push(imageUrl);
+
+        // Update category with new background images
+        await db.promise.run(
+            'UPDATE categories SET background_images = ? WHERE id = ?',
+            [JSON.stringify(backgroundImages), categoryId]
+        );
+
+        res.json({ 
+            message: 'Background image uploaded successfully',
+            imageUrl,
+            backgroundImages
+        });
+    } catch (error) {
+        console.error('Upload background image error:', error);
+        // Delete uploaded file on error
+        if (req.file && req.file.path) {
+            try {
+                fs.unlinkSync(req.file.path);
+            } catch (e) {
+                console.error('Error deleting uploaded file:', e);
+            }
+        }
+        res.status(500).json({ error: 'Failed to upload background image' });
+    }
+});
+
 // Delete category
 router.delete('/categories/:id', async (req, res) => {
     try {
@@ -304,6 +396,7 @@ router.get('/posts', async (req, res) => {
         const limit = parseInt(req.query.limit) || 50;
         const offset = parseInt(req.query.offset) || 0;
 
+        const { decodeHtmlEntities } = require('../middleware/security');
         const posts = await db.promise.all(
             `SELECT p.*, u.username, u.email,
              (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes_count,
@@ -315,7 +408,14 @@ router.get('/posts', async (req, res) => {
             [limit, offset]
         );
 
-        res.json(posts);
+        // Decode HTML entities in post titles and descriptions
+        const decodedPosts = posts.map(post => ({
+            ...post,
+            title: post.title ? decodeHtmlEntities(post.title) : post.title,
+            description: post.description ? decodeHtmlEntities(post.description) : post.description
+        }));
+
+        res.json(decodedPosts);
     } catch (error) {
         console.error('Get posts error:', error);
         res.status(500).json({ error: 'Failed to get posts' });

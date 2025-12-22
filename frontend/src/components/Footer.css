@@ -1,9 +1,10 @@
 .footer {
-  background: rgba(10, 10, 10, 0.9);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(10, 10, 10, 0.95);
+  backdrop-filter: blur(15px);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
   padding: 3rem 2rem 1.5rem;
   margin-top: 4rem;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .footer-content {
@@ -23,10 +24,11 @@
 }
 
 .footer-link {
-  color: rgba(255, 255, 255, 0.7);
+  color: #ffffff;
   text-decoration: none;
   transition: all 0.2s;
   display: inline-block;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .footer-link:hover {
@@ -38,9 +40,10 @@
   max-width: 1400px;
   margin: 0 auto;
   padding-top: 2rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
   text-align: center;
-  color: rgba(255, 255, 255, 0.5);
+  color: #ffffff;
   font-size: 0.875rem;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 

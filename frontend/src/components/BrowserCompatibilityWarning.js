@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { checkBrowserCompatibility } from '../utils/browserCompatibility';
+import { checkBrowserCompatibility, safeLocalStorage } from '../utils/browserCompatibility';
 import './BrowserCompatibilityWarning.css';
 
 const BrowserCompatibilityWarning = () => {
@@ -11,7 +11,7 @@ const BrowserCompatibilityWarning = () => {
     setCompatibility(check);
     
     // Check if user has dismissed the warning
-    const dismissedWarning = localStorage.getItem('browser-warning-dismissed');
+    const dismissedWarning = safeLocalStorage.getItem('browser-warning-dismissed');
     if (dismissedWarning === 'true') {
       setDismissed(true);
     }
@@ -19,11 +19,7 @@ const BrowserCompatibilityWarning = () => {
 
   const handleDismiss = () => {
     setDismissed(true);
-    try {
-      localStorage.setItem('browser-warning-dismissed', 'true');
-    } catch (e) {
-      // Ignore localStorage errors
-    }
+    safeLocalStorage.setItem('browser-warning-dismissed', 'true');
   };
 
   if (!compatibility || dismissed) {

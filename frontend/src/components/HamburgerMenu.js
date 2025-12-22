@@ -28,11 +28,13 @@ const HamburgerMenu = () => {
 
   const menuItems = user ? [
     { path: '/', label: 'Accueil' },
+    { path: '/sections', label: 'Sections' },
     { path: '/search', label: 'Recherche' },
     { path: '/profile', label: 'Mon Profil' },
     ...(user.role === 'admin' ? [{ path: '/admin', label: 'Interface Admin', action: toggleInterface }] : [])
   ] : [
     { path: '/', label: 'Accueil' },
+    { path: '/sections', label: 'Sections' },
     { path: '/search', label: 'Recherche' },
     { path: '/login', label: 'Connexion' },
     { path: '/register', label: 'Inscription' }

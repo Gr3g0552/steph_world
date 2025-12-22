@@ -1,77 +1,114 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 6000;
 
-// Security middleware
+// CORS MUST be configured FIRST, before any other middleware
+// This ensures CORS headers are always set, even on errors
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        // Allow all origins in development/non-production
+        if (process.env.NODE_ENV !== 'production') {
+            return callback(null, true);
+        }
+        
+        // In production, only allow specific origins
+        const allowedOrigins = process.env.ALLOWED_ORIGINS 
+            ? process.env.ALLOWED_ORIGINS.split(',')
+            : ['http://localhost:3000'];
+        
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(null, true); // Allow all for now - restrict in production
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204
+};
+
+// Apply CORS to all routes FIRST
+app.use(cors(corsOptions));
+
+// Handle preflight OPTIONS requests explicitly
+app.options('*', cors(corsOptions));
+
+// Middleware to ensure CORS headers are ALWAYS set, even on errors
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    }
+    // Store original json/status methods to ensure CORS headers are sent
+    const originalJson = res.json;
+    const originalStatus = res.status;
+    
+    res.status = function(code) {
+        if (origin) {
+            res.setHeader('Access-Control-Allow-Origin', origin);
+            res.setHeader('Access-Control-Allow-Credentials', 'true');
+        }
+        return originalStatus.call(this, code);
+    };
+    
+    res.json = function(data) {
+        if (origin) {
+            res.setHeader('Access-Control-Allow-Origin', origin);
+            res.setHeader('Access-Control-Allow-Credentials', 'true');
+        }
+        return originalJson.call(this, data);
+    };
+    
+    next();
+});
+
+// Security middleware (after CORS)
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'"],
-            scriptSrc: ["'self'"],
+            scriptSrc: [
+                "'self'",
+                "'unsafe-inline'", // Allow inline scripts
+                "https://*.cloudflare.com", // Allow all Cloudflare scripts (challenges, etc.)
+                "https://*.cloudflareinsights.com" // Cloudflare Insights (if enabled)
+            ],
             imgSrc: ["'self'", "data:", "https:", "http:"],
-            connectSrc: ["'self'"],
+            connectSrc: [
+                "'self'",
+                "http://localhost:*",
+                "https://*.cloudflare.com", // Allow all Cloudflare connections
+                "https://*.cloudflareinsights.com", // Cloudflare Insights
+                "https://*", // Allow all HTTPS connections (for API through Cloudflare)
+                "http://*" // Allow all HTTP connections (for local network)
+            ]
         },
     },
-    crossOriginEmbedderPolicy: false
+    crossOriginEmbedderPolicy: false,
+    // Allow Cloudflare to inject scripts
+    crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
-app.use(cors({
-    origin: process.env.NODE_ENV === 'production' 
-        ? ['http://localhost:3000'] 
-        : ['http://localhost:3000', 'http://localhost:3001'],
-    credentials: true
-}));
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Enhanced rate limiting
-const { strictLimiter, sanitizeBody, validateId } = require('./middleware/security');
-// Check admin status and apply rate limiting
-app.use('/api/', (req, res, next) => {
-  // Skip rate limiting for login route (has its own authLimiter)
-  if ((req.path === '/auth/login' || req.originalUrl === '/api/auth/login') && req.method === 'POST') {
-    return next();
-  }
-  
-  // Check if user is admin FIRST - before any rate limiting
-  // This must happen synchronously before the rate limiter runs
-  const authHeader = req.headers['authorization'];
-  let isAdmin = false;
-  
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    try {
-      const jwt = require('jsonwebtoken');
-      const token = authHeader.split(' ')[1];
-      if (token) {
-        const decoded = jwt.decode(token);
-        if (decoded && decoded.role === 'admin') {
-          isAdmin = true;
-          // Set flag on request for rate limiter
-          req.skipRateLimit = true;
-          req.isAdmin = true;
-          // Log for debugging (remove in production if too verbose)
-          // console.log('Admin user detected, bypassing rate limit');
-        }
-      }
-    } catch (error) {
-      // If decode fails, continue to rate limiting
-    }
-  }
-  
-  // Admin user - completely bypass rate limiting
-  if (isAdmin) {
-    return next();
-  }
-  
-  // Regular user - apply rate limiting with admin check in skip function
-  strictLimiter(req, res, next);
-});
+// Security middleware (sanitization and validation)
+const { sanitizeBody, validateId } = require('./middleware/security');
 app.use(sanitizeBody);
 app.use(validateId);
 

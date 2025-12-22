@@ -1,13 +1,14 @@
 .create-post-modal {
-  background: rgba(26, 26, 26, 0.95);
+  background: rgba(20, 20, 20, 0.98);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 16px;
   padding: 2rem;
   max-width: 600px;
   width: 90%;
   max-height: 90vh;
   overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
 .create-post-modal h2 {
@@ -33,7 +34,8 @@
 .word-count {
   margin-top: 0.5rem;
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .error-message {
@@ -43,5 +45,50 @@
   padding: 0.75rem;
   border-radius: 8px;
   margin-bottom: 1rem;
+}
+
+/* Responsive Styles */
+/* Mobile devices (portrait) */
+@media (max-width: 767px) {
+  .create-post-modal {
+    padding: 1.5rem;
+    width: 95%;
+    max-height: 95vh;
+    border-radius: 12px;
+  }
+
+  .create-post-modal h2 {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .preview-container {
+    max-height: 200px;
+  }
+
+  .preview-container img,
+  .preview-container video {
+    max-height: 200px;
+  }
+}
+
+/* Tablet devices (portrait and landscape) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .create-post-modal {
+    padding: 1.75rem;
+    max-width: 550px;
+  }
+}
+
+/* Landscape orientation on mobile/tablet */
+@media (orientation: landscape) and (max-height: 600px) {
+  .create-post-modal {
+    max-height: 90vh;
+    padding: 1rem;
+  }
+
+  .preview-container {
+    max-height: 150px;
+  }
 }
 

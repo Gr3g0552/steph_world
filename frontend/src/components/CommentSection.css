@@ -25,7 +25,7 @@
 }
 
 .comment-form input::placeholder {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .comment-form button {
@@ -100,6 +100,8 @@
 .comment-username {
   font-weight: 500;
   font-size: 0.9rem;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .comment-menu {
@@ -125,14 +127,14 @@
   position: absolute;
   top: 100%;
   right: 0;
-  background: rgba(26, 26, 26, 0.95);
+  background: rgba(20, 20, 20, 0.98);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   padding: 0.5rem;
   min-width: 150px;
   z-index: 100;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .comment-menu-dropdown button {
@@ -143,11 +145,12 @@
   padding: 0.5rem;
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.8);
+  color: #ffffff;
   cursor: pointer;
   border-radius: 4px;
   text-align: left;
   transition: all 0.2s;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .comment-menu-dropdown button:hover {
@@ -156,10 +159,11 @@
 }
 
 .comment-content {
-  color: rgba(255, 255, 255, 0.9);
+  color: #ffffff;
   line-height: 1.6;
   margin: 0.5rem 0;
   word-wrap: break-word;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .comment-edit-form {
@@ -217,12 +221,13 @@
   gap: 0.5rem;
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.6);
+  color: #ffffff;
   cursor: pointer;
   font-size: 0.875rem;
   padding: 0.25rem 0.5rem;
   border-radius: 6px;
   transition: all 0.2s;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .comment-like-button:hover,
@@ -284,8 +289,79 @@
 
 .no-comments {
   text-align: center;
-  color: rgba(255, 255, 255, 0.5);
+  color: #ffffff;
   padding: 3rem 1rem;
   font-style: italic;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* Responsive Styles */
+/* Mobile devices (portrait) */
+@media (max-width: 767px) {
+  .comment-section {
+    margin-top: 1.5rem;
+  }
+
+  .comment-section-title {
+    font-size: 1.1rem;
+  }
+
+  .comment-form {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .comment-form button {
+    width: 100%;
+    padding: 0.875rem 1.25rem;
+  }
+
+  .comments-list {
+    max-height: 400px;
+  }
+
+  .comment-item {
+    padding: 0.75rem;
+  }
+
+  .comment-reply {
+    margin-left: 1rem;
+    padding-left: 0.75rem;
+  }
+
+  .comment-avatar {
+    width: 28px;
+    height: 28px;
+  }
+
+  .comment-username {
+    font-size: 0.85rem;
+  }
+
+  .comment-content {
+    font-size: 0.9rem;
+  }
+
+  .comment-edit-form textarea {
+    min-height: 60px;
+  }
+
+  .comment-reply-form {
+    padding: 0.75rem;
+  }
+}
+
+/* Tablet devices (portrait and landscape) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .comments-list {
+    max-height: 500px;
+  }
+}
+
+/* Landscape orientation on mobile/tablet */
+@media (orientation: landscape) and (max-height: 600px) {
+  .comments-list {
+    max-height: 300px;
+  }
 }
 

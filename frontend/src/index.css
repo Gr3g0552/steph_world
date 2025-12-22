@@ -67,3 +67,50 @@ code {
   }
 }
 
+/* Global Responsive Styles */
+/* Mobile First Approach */
+
+/* Mobile devices (portrait) - up to 767px */
+@media (max-width: 767px) {
+  body {
+    font-size: 14px;
+  }
+  
+  /* Ensure touch targets are at least 44x44px for accessibility */
+  button, a, input[type="button"], input[type="submit"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Tablet devices (portrait and landscape) - 768px to 1024px */
+@media (min-width: 768px) and (max-width: 1024px) {
+  body {
+    font-size: 15px;
+  }
+}
+
+/* Desktop devices (landscape) - above 1024px */
+@media (min-width: 1025px) {
+  body {
+    font-size: 16px;
+  }
+}
+
+/* Landscape orientation adjustments */
+@media (orientation: landscape) and (max-height: 600px) {
+  /* Optimize for landscape mobile/tablet */
+  .header {
+    padding: 0.5rem 1rem;
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  /* Ensure crisp rendering on retina displays */
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+

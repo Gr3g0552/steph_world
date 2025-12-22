@@ -9,15 +9,16 @@
 }
 
 .profile-header {
-  background: rgba(26, 26, 26, 0.9);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(26, 26, 26, 0.95);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 16px;
   padding: 3rem;
   margin-bottom: 2rem;
   display: flex;
   gap: 3rem;
   align-items: flex-start;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .profile-avatar-large {
@@ -39,9 +40,10 @@
 }
 
 .profile-description {
-  color: rgba(255, 255, 255, 0.8);
+  color: #ffffff;
   margin-bottom: 1rem;
   line-height: 1.6;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
 .edit-button {
@@ -75,6 +77,87 @@
 .edit-form textarea {
   resize: vertical;
   min-height: 100px;
+}
+
+.profile-image-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.upload-label {
+  padding: 0.75rem 1.5rem;
+  background: rgba(102, 126, 234, 0.2);
+  color: #667eea;
+  border: 1px solid rgba(102, 126, 234, 0.5);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+  font-weight: 500;
+  transition: all 0.2s;
+  display: block;
+}
+
+.upload-label:hover {
+  background: rgba(102, 126, 234, 0.3);
+  border-color: rgba(102, 126, 234, 0.7);
+}
+
+.upload-label:active {
+  transform: scale(0.98);
+}
+
+.or-divider {
+  text-align: center;
+  color: #ffffff;
+  font-size: 0.875rem;
+  position: relative;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.or-divider::before,
+.or-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 40%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.or-divider::before {
+  left: 0;
+}
+
+.or-divider::after {
+  right: 0;
+}
+
+.profile-image-url-input {
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #fff;
+  font-family: inherit;
+  width: 100%;
+}
+
+.profile-image-preview {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.profile-image-preview img {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 2px solid rgba(102, 126, 234, 0.3);
 }
 
 .edit-actions {
@@ -123,7 +206,8 @@
 
 .stat-label {
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .saved-link {
@@ -137,6 +221,112 @@
 .saved-link:hover {
   color: #764ba2;
   text-decoration: underline;
+}
+
+.password-section {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.toggle-password-button {
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.toggle-password-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.change-password-form {
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  margin-bottom: 0.5rem;
+}
+
+.change-password-form h3 {
+  color: #fff;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+.password-input {
+  width: 100%;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #fff;
+  font-family: inherit;
+  margin-bottom: 1rem;
+}
+
+.password-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.password-input:focus {
+  outline: none;
+  border-color: rgba(102, 126, 234, 0.5);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.password-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.save-password-button {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.save-password-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+}
+
+.save-password-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancel-password-button {
+  padding: 0.75rem 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.cancel-password-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.cancel-password-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .profile-posts h2 {
@@ -154,13 +344,134 @@
 .empty-state {
   text-align: center;
   padding: 4rem 2rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: #ffffff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 .loading,
 .error {
   text-align: center;
   padding: 4rem 2rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: #ffffff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* Responsive Styles */
+/* Mobile devices (portrait) */
+@media (max-width: 767px) {
+  .profile-page {
+    padding: 1rem;
+  }
+
+  .profile-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 2rem 1.5rem;
+    gap: 1.5rem;
+  }
+
+  .profile-avatar-large {
+    width: 120px;
+    height: 120px;
+  }
+
+  .profile-info h1 {
+    font-size: 1.5rem;
+  }
+
+  .profile-stats {
+    justify-content: center;
+    gap: 1.5rem;
+  }
+
+  .stat-number {
+    font-size: 1.25rem;
+  }
+
+  .posts-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .edit-form {
+    gap: 0.75rem;
+  }
+
+  .edit-actions {
+    flex-direction: column;
+  }
+
+  .edit-actions button {
+    width: 100%;
+  }
+
+  .profile-image-preview img {
+    max-width: 150px;
+    max-height: 150px;
+  }
+
+  .saved-link {
+    margin-left: 0;
+    margin-top: 1rem;
+    display: block;
+    text-align: center;
+  }
+
+  .change-password-form {
+    padding: 1rem;
+  }
+
+  .password-actions {
+    flex-direction: column;
+  }
+
+  .password-actions button {
+    width: 100%;
+  }
+}
+
+/* Tablet devices (portrait and landscape) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .profile-page {
+    padding: 1.5rem;
+  }
+
+  .profile-header {
+    padding: 2.5rem;
+    gap: 2rem;
+  }
+
+  .profile-avatar-large {
+    width: 130px;
+    height: 130px;
+  }
+
+  .profile-info h1 {
+    font-size: 1.75rem;
+  }
+
+  .posts-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+}
+
+/* Landscape orientation on mobile/tablet */
+@media (orientation: landscape) and (max-height: 600px) {
+  .profile-header {
+    padding: 1.5rem;
+    gap: 1rem;
+  }
+
+  .profile-avatar-large {
+    width: 100px;
+    height: 100px;
+  }
+
+  .profile-info h1 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
 }
 

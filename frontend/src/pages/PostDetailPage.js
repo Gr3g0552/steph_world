@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FaHeart, FaComment } from 'react-icons/fa';
+import { FaHeart, FaComment, FaEdit, FaCheck, FaTimes } from 'react-icons/fa';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
@@ -19,6 +19,8 @@ const PostDetailPage = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [expanded, setExpanded] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editDescription, setEditDescription] = useState('');
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -51,6 +53,35 @@ const PostDetailPage = () => {
       console.error('Error liking post:', error);
       showToast('Erreur lors du like', 'error');
     }
+  };
+
+  const handleEditDescription = () => {
+    setEditDescription(post.description || '');
+    setIsEditingDescription(true);
+    setExpanded(true); // Expand when editing
+  };
+
+  const handleSaveDescription = async () => {
+    if (!editDescription.trim() && editDescription.length > 2000) {
+      showToast('La description ne peut pas dépasser 2000 caractères', 'error');
+      return;
+    }
+    
+    try {
+      const response = await api.put(`/posts/${id}`, { description: editDescription });
+      setPost(response.data);
+      setIsEditingDescription(false);
+      showToast('Description modifiée avec succès', 'success');
+    } catch (error) {
+      console.error('Error updating description:', error);
+      const errorMsg = error.response?.data?.error || 'Erreur lors de la modification';
+      showToast(errorMsg, 'error');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingDescription(false);
+    setEditDescription('');
   };
 
 
@@ -104,16 +135,57 @@ const PostDetailPage = () => {
 
           {post.title && <h2>{post.title}</h2>}
 
-          {description && (
+          {(description || (user && user.id === post.user_id)) && (
             <div className="post-description">
-              <p>{displayText}</p>
-              {shouldTruncate && (
-                <button
-                  className="expand-button"
-                  onClick={() => setExpanded(!expanded)}
-                >
-                  {expanded ? 'Voir moins' : 'Voir plus'}
-                </button>
+              {isEditingDescription ? (
+                <div className="description-edit-form">
+                  <textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    rows={4}
+                    maxLength={2000}
+                    className="description-edit-textarea"
+                    placeholder="Description de la publication..."
+                  />
+                  <div className="description-edit-actions">
+                    <button
+                      onClick={handleSaveDescription}
+                      className="save-button"
+                      disabled={!editDescription.trim()}
+                    >
+                      <FaCheck /> Enregistrer
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="cancel-button"
+                    >
+                      <FaTimes /> Annuler
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {description && <p>{displayText}</p>}
+                  <div className="description-actions">
+                    {shouldTruncate && !isEditingDescription && (
+                      <button
+                        className="expand-button"
+                        onClick={() => setExpanded(!expanded)}
+                      >
+                        {expanded ? 'Voir moins' : 'Voir plus'}
+                      </button>
+                    )}
+                    {user && user.id === post.user_id && (
+                      <button
+                        className="edit-description-button"
+                        onClick={handleEditDescription}
+                        title="Modifier la description"
+                      >
+                        <FaEdit /> Modifier
+                      </button>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           )}

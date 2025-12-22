@@ -2,7 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const db = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
-const { uploadLimiter, commentLimiter, validateFile, validateInput } = require('../middleware/security');
+const { validateFile, validateInput } = require('../middleware/security');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -41,7 +41,7 @@ const upload = multer({
 });
 
 // Create post
-router.post('/', authenticateToken, uploadLimiter, upload.single('file'), validateFile, [
+router.post('/', authenticateToken, upload.single('file'), validateFile, [
     body('title').optional().trim().isLength({ max: 200 }).escape(),
     body('description').optional().isLength({ max: 2000 }).escape(),
     body('category_id').isInt({ min: 1 }),
@@ -67,6 +67,7 @@ router.post('/', authenticateToken, uploadLimiter, upload.single('file'), valida
             [req.user.id, category_id, subcategory_id || null, title || null, description || null, filePath, fileType]
         );
 
+        const { decodeHtmlEntities } = require('../middleware/security');
         const post = await db.promise.get(
             `SELECT p.*, u.username, u.profile_image,
              (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes_count,
@@ -76,6 +77,12 @@ router.post('/', authenticateToken, uploadLimiter, upload.single('file'), valida
              WHERE p.id = ?`,
             [result.lastID]
         );
+
+        // Decode HTML entities in post title and description
+        if (post) {
+            post.title = post.title ? decodeHtmlEntities(post.title) : post.title;
+            post.description = post.description ? decodeHtmlEntities(post.description) : post.description;
+        }
 
         res.status(201).json(post);
     } catch (error) {
@@ -115,8 +122,15 @@ router.get('/', authenticateToken, async (req, res) => {
         query += ' ORDER BY p.created_at DESC LIMIT ? OFFSET ?';
         params.push(limit, offset);
 
+        const { decodeHtmlEntities } = require('../middleware/security');
         const posts = await db.promise.all(query, params);
-        res.json(posts);
+        // Decode HTML entities in post titles and descriptions
+        const decodedPosts = posts.map(post => ({
+            ...post,
+            title: post.title ? decodeHtmlEntities(post.title) : post.title,
+            description: post.description ? decodeHtmlEntities(post.description) : post.description
+        }));
+        res.json(decodedPosts);
     } catch (error) {
         console.error('Get posts error:', error);
         res.status(500).json({ error: 'Failed to get posts' });
@@ -141,6 +155,11 @@ router.get('/:id', authenticateToken, async (req, res) => {
         if (!post) {
             return res.status(404).json({ error: 'Post not found' });
         }
+
+        // Decode HTML entities in post title and description
+        const { decodeHtmlEntities } = require('../middleware/security');
+        post.title = post.title ? decodeHtmlEntities(post.title) : post.title;
+        post.description = post.description ? decodeHtmlEntities(post.description) : post.description;
 
         res.json(post);
     } catch (error) {
@@ -192,7 +211,27 @@ router.put('/:id', authenticateToken, [
         values.push(postId);
 
         await db.promise.run(`UPDATE posts SET ${updates.join(', ')} WHERE id = ?`, values);
-        res.json({ message: 'Post updated successfully' });
+        
+        // Return updated post
+        const { decodeHtmlEntities } = require('../middleware/security');
+        const updatedPost = await db.promise.get(
+            `SELECT p.*, u.username, u.profile_image,
+             (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes_count,
+             (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comments_count,
+             EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = ?) as is_liked
+             FROM posts p
+             JOIN users u ON p.user_id = u.id
+             WHERE p.id = ?`,
+            [req.user.id, postId]
+        );
+        
+        // Decode HTML entities in post title and description
+        if (updatedPost) {
+            updatedPost.title = updatedPost.title ? decodeHtmlEntities(updatedPost.title) : updatedPost.title;
+            updatedPost.description = updatedPost.description ? decodeHtmlEntities(updatedPost.description) : updatedPost.description;
+        }
+        
+        res.json(updatedPost);
     } catch (error) {
         console.error('Update post error:', error);
         res.status(500).json({ error: 'Failed to update post' });
@@ -259,6 +298,7 @@ router.post('/:id/like', authenticateToken, async (req, res) => {
 router.get('/:id/comments', authenticateToken, async (req, res) => {
     try {
         const postId = parseInt(req.params.id);
+        const { decodeHtmlEntities } = require('../middleware/security');
         const comments = await db.promise.all(
             `SELECT c.*, u.username, u.profile_image,
              (SELECT COUNT(*) FROM comment_likes WHERE comment_id = c.id) as likes_count,
@@ -269,7 +309,12 @@ router.get('/:id/comments', authenticateToken, async (req, res) => {
              ORDER BY c.created_at ASC`,
             [req.user.id, postId]
         );
-        res.json(comments);
+        // Decode HTML entities in comment content for proper display
+        const decodedComments = comments.map(comment => ({
+            ...comment,
+            content: decodeHtmlEntities(comment.content)
+        }));
+        res.json(decodedComments);
     } catch (error) {
         console.error('Get comments error:', error);
         res.status(500).json({ error: 'Failed to get comments' });
@@ -277,14 +322,30 @@ router.get('/:id/comments', authenticateToken, async (req, res) => {
 });
 
 // Add comment
-router.post('/:id/comments', authenticateToken, commentLimiter, [
-    body('content').trim().isLength({ min: 1, max: 1000 }).escape(),
-    body('parent_id').optional().isInt({ min: 1 })
+router.post('/:id/comments', authenticateToken, [
+    body('content').trim().notEmpty().withMessage('Content is required').isLength({ min: 1, max: 1000 }).withMessage('Content must be between 1 and 1000 characters').escape(), // Escape HTML to prevent XSS
+    body('parent_id').optional({ nullable: true, checkFalsy: true }).isInt({ min: 1 }).withMessage('Parent ID must be a positive integer')
 ], validateInput, async (req, res) => {
     try {
         const postId = parseInt(req.params.id);
-        const { content, parent_id } = req.body;
+        let { content, parent_id } = req.body;
+        
+        // Ensure content is not empty after trimming
+        if (!content || !content.trim()) {
+            return res.status(400).json({ error: 'Content cannot be empty' });
+        }
+        
+        // Convert parent_id to null if it's not a valid integer
+        if (parent_id !== undefined && parent_id !== null) {
+            parent_id = parseInt(parent_id);
+            if (isNaN(parent_id) || parent_id < 1) {
+                parent_id = null;
+            }
+        } else {
+            parent_id = null;
+        }
 
+        // Content is already escaped by express-validator, store it as-is
         const result = await db.promise.run(
             'INSERT INTO comments (post_id, user_id, content, parent_id) VALUES (?, ?, ?, ?)',
             [postId, req.user.id, content, parent_id || null]
@@ -296,6 +357,7 @@ router.post('/:id/comments', authenticateToken, commentLimiter, [
             [postId]
         );
 
+        const { decodeHtmlEntities } = require('../middleware/security');
         const comment = await db.promise.get(
             `SELECT c.*, u.username, u.profile_image,
              (SELECT COUNT(*) FROM comment_likes WHERE comment_id = c.id) as likes_count,
@@ -305,6 +367,11 @@ router.post('/:id/comments', authenticateToken, commentLimiter, [
              WHERE c.id = ?`,
             [req.user.id, result.lastID]
         );
+
+        // Decode HTML entities in comment content for proper display
+        if (comment) {
+            comment.content = decodeHtmlEntities(comment.content);
+        }
 
         res.status(201).json(comment);
     } catch (error) {

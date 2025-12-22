@@ -2,7 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const db = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
-const { commentLimiter, validateInput } = require('../middleware/security');
+const { validateInput } = require('../middleware/security');
 
 const router = express.Router();
 
@@ -48,7 +48,7 @@ router.post('/:id/like', authenticateToken, async (req, res) => {
 });
 
 // Update comment
-router.put('/:id', authenticateToken, commentLimiter, [
+router.put('/:id', authenticateToken, [
     body('content').trim().notEmpty().isLength({ max: 1000 }).escape()
 ], validateInput, async (req, res) => {
     try {
@@ -74,6 +74,7 @@ router.put('/:id', authenticateToken, commentLimiter, [
             [content, commentId]
         );
 
+        const { decodeHtmlEntities } = require('../middleware/security');
         const updated = await db.promise.get(
             `SELECT c.*, u.username, u.profile_image,
              (SELECT COUNT(*) FROM comment_likes WHERE comment_id = c.id) as likes_count,
@@ -83,6 +84,11 @@ router.put('/:id', authenticateToken, commentLimiter, [
              WHERE c.id = ?`,
             [req.user.id, commentId]
         );
+
+        // Decode HTML entities in comment content for proper display
+        if (updated) {
+            updated.content = decodeHtmlEntities(updated.content);
+        }
 
         res.json(updated);
     } catch (error) {

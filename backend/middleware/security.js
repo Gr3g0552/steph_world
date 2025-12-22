@@ -1,10 +1,20 @@
-const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
-const db = require('../config/database');
 
-// Sanitize input to prevent XSS
-const sanitizeInput = (str) => {
+// Sanitize input to prevent XSS (but preserve URLs)
+const sanitizeInput = (str, isUrl = false) => {
     if (typeof str !== 'string') return str;
+    
+    // If it's a URL, don't encode slashes
+    if (isUrl) {
+        // Only sanitize potentially dangerous characters, but keep URL structure
+        return str
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;');
+    }
+    
+    // For regular text, sanitize everything including slashes
     return str
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
@@ -13,136 +23,74 @@ const sanitizeInput = (str) => {
         .replace(/\//g, '&#x2F;');
 };
 
-// Enhanced rate limiting for different endpoints
-const createRateLimiter = (windowMs, max, message) => {
-    return rateLimit({
-        windowMs,
-        max,
-        message: { error: message },
-        standardHeaders: true,
-        legacyHeaders: false,
-    });
+// Decode HTML entities (for fixing already encoded URLs)
+const decodeHtmlEntities = (str) => {
+    if (typeof str !== 'string') return str;
+    return str
+        .replace(/&#x2F;/g, '/')
+        .replace(/&#x27;/g, "'")
+        .replace(/&quot;/g, '"')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&');
 };
 
-// Custom rate limiter for authentication that bypasses rate limiting for admin emails
-const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10, // Increased from 5 to 10 for regular users
-    skip: async (req) => {
-        // Skip rate limiting for admin emails
-        const email = req.body?.email?.toLowerCase()?.trim();
-        if (email) {
-            try {
-                // Try exact match first
-                let user = await db.promise.get(
-                    'SELECT role FROM users WHERE email = ?',
-                    [email]
-                );
-                
-                // If not found and email contains dots, try without dots (Gmail normalization)
-                if (!user && email.includes('.')) {
-                    const emailWithoutDots = email.replace(/\./g, '');
-                    user = await db.promise.get(
-                        'SELECT role FROM users WHERE REPLACE(email, ".", "") = ?',
-                        [emailWithoutDots]
-                    );
-                }
-                
-                // Skip rate limiting for admin accounts
-                if (user && user.role === 'admin') {
-                    return true; // Skip rate limiting
-                }
-            } catch (error) {
-                console.error('Error checking admin status for rate limiting:', error);
-                // On error, don't skip (apply rate limiting)
-            }
-        }
-        return false; // Don't skip (apply rate limiting)
-    },
-    message: { error: 'Too many authentication attempts, please try again later' },
-    standardHeaders: true,
-    legacyHeaders: false,
-});
-
-// Middleware to check if user is admin and bypass rate limiting
-const checkAdminBypass = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        try {
-            const jwt = require('jsonwebtoken');
-            const token = authHeader.split(' ')[1];
-            if (token) {
-                const decoded = jwt.decode(token);
-                if (decoded && decoded.role === 'admin') {
-                    // Set flag to bypass rate limiting
-                    req.skipRateLimit = true;
-                    // Also set a property to identify admin requests
-                    req.isAdmin = true;
-                }
-            }
-        } catch (error) {
-            // If decode fails, continue normally
-        }
-    }
-    next();
+// Check if a string looks like a URL
+const isUrl = (str) => {
+    if (typeof str !== 'string') return false;
+    return str.startsWith('http://') || 
+           str.startsWith('https://') || 
+           str.startsWith('/uploads/') ||
+           str.startsWith('data:') ||
+           /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(str); // Protocol-like pattern
 };
-
-// Custom rate limiter that skips authenticated admin users
-// Uses JWT payload to check role synchronously (role is included in JWT token)
-const strictLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 1000, // Very high limit for regular users
-    skip: (req) => {
-        // PRIMARY CHECK: Skip if admin bypass flag is set (set in server.js before rate limiter)
-        // This is the most reliable check since it's set synchronously before the rate limiter runs
-        if (req.skipRateLimit === true || req.isAdmin === true) {
-            return true;
-        }
-        
-        // FALLBACK CHECK: Check JWT directly in case flag wasn't set
-        // This provides redundancy in case the flag check fails
-        const authHeader = req.headers['authorization'];
-        if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
-            try {
-                const jwt = require('jsonwebtoken');
-                const token = authHeader.split(' ')[1];
-                if (token && typeof token === 'string') {
-                    const decoded = jwt.decode(token);
-                    if (decoded && decoded.role === 'admin') {
-                        // Set flags for consistency
-                        req.skipRateLimit = true;
-                        req.isAdmin = true;
-                        return true; // Skip rate limiting for admin
-                    }
-                }
-            } catch (error) {
-                // Continue with rate limiting on error
-            }
-        }
-        return false; // Apply rate limiting for non-admin users
-    },
-    message: { error: 'Too many requests, please try again later' },
-    standardHeaders: true,
-    legacyHeaders: false,
-});
-const uploadLimiter = createRateLimiter(60 * 60 * 1000, 20, 'Too many uploads, please try again later');
-const commentLimiter = createRateLimiter(15 * 60 * 1000, 30, 'Too many comments, please try again later');
 
 // Validation middleware
 const validateInput = (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        // Log validation errors for debugging
+        console.error('Validation errors:', errors.array());
+        return res.status(400).json({ 
+            error: 'Validation failed',
+            errors: errors.array() 
+        });
     }
     next();
 };
 
-// Sanitize request body
+// Sanitize request body (but preserve URLs)
 const sanitizeBody = (req, res, next) => {
     if (req.body) {
+        // Fields that should be treated as URLs and not have slashes encoded
+        const urlFields = ['profile_image', 'background_images', 'file_path', 'imageUrl', 'image_url'];
+        // Fields that should NOT be sanitized (they will be handled by express-validator)
+        const skipSanitizationFields = ['content']; // Comment content is handled by express-validator
+        
         Object.keys(req.body).forEach(key => {
+            // Skip sanitization for specific fields
+            if (skipSanitizationFields.includes(key)) {
+                return; // Skip this field, let express-validator handle it
+            }
+            
             if (typeof req.body[key] === 'string') {
-                req.body[key] = sanitizeInput(req.body[key]);
+                // First, decode any already encoded entities (fix for existing issues)
+                req.body[key] = decodeHtmlEntities(req.body[key]);
+                
+                // Check if this field should be treated as a URL
+                const isUrlField = urlFields.includes(key) || isUrl(req.body[key]);
+                
+                // Sanitize but preserve URL structure
+                req.body[key] = sanitizeInput(req.body[key], isUrlField);
+            } else if (Array.isArray(req.body[key]) && key === 'background_images') {
+                // Handle background_images array
+                req.body[key] = req.body[key].map(item => {
+                    if (typeof item === 'string') {
+                        const decoded = decodeHtmlEntities(item);
+                        return sanitizeInput(decoded, true);
+                    }
+                    return item;
+                });
             }
         });
     }
@@ -196,10 +144,6 @@ module.exports = {
     validateInput,
     validateFile,
     validateId,
-    strictLimiter,
-    authLimiter,
-    uploadLimiter,
-    commentLimiter,
-    checkAdminBypass,
+    decodeHtmlEntities,
 };
 
