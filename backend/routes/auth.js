@@ -109,6 +109,9 @@ router.post('/login', [
             }
         }
 
+        // Update last activity on login
+        await db.promise.run('UPDATE users SET last_activity = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
+
         // Generate JWT
         const token = jwt.sign(
             { userId: user.id, email: user.email, role: user.role },

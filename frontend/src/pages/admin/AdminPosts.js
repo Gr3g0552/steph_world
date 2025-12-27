@@ -71,8 +71,12 @@ const AdminPosts = () => {
                 <td>
                   {post.file_type === 'image' ? (
                     <img src={post.file_path} alt="" className="post-thumbnail" />
-                  ) : (
+                  ) : post.file_type === 'video' ? (
                     <span>🎥</span>
+                  ) : post.file_type === 'audio' ? (
+                    <span>🎵</span>
+                  ) : (
+                    <span>📁</span>
                   )}
                 </td>
                 <td>{post.username}</td>

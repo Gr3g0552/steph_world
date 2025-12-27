@@ -69,6 +69,12 @@ const PostCard = ({ post, onLike }) => {
           <div className="post-media">
             {post.file_type === 'image' ? (
               <img src={post.file_path} alt={post.title || 'Post'} loading="lazy" />
+            ) : post.file_type === 'video' ? (
+              <video src={post.file_path} controls />
+            ) : post.file_type === 'audio' ? (
+              <div className="audio-player-container">
+                <audio src={post.file_path} controls style={{ width: '100%' }} />
+              </div>
             ) : (
               <video src={post.file_path} controls />
             )}

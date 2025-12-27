@@ -50,8 +50,8 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  // Increase timeout for Cloudflare/production (60 seconds)
-  timeout: 60000,
+  // Increase timeout for large file uploads (3 minutes)
+  timeout: 180000,
 });
 
 // Add token to requests
@@ -60,6 +60,10 @@ api.interceptors.request.use(
     const token = safeLocalStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    // Remove Content-Type header for FormData to let axios set it with boundary
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
     }
     return config;
   },

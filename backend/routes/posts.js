@@ -29,42 +29,140 @@ const upload = multer({
     storage: storage,
     limits: { fileSize: 200 * 1024 * 1024 }, // 200MB
     fileFilter: (req, file, cb) => {
-        const allowedTypes = /jpeg|jpg|png|gif|mp4|mov|avi|webm/;
-        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-        const mimetype = allowedTypes.test(file.mimetype);
-        if (extname && mimetype) {
+        console.log('Multer fileFilter - File received:', {
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            fieldname: file.fieldname
+        });
+        
+        // Allow images, videos, and audio files
+        const allowedExtensions = /jpeg|jpg|png|gif|webp|mp4|mov|avi|webm|mp3|wav|ogg|m4a|aac|flac|wma/;
+        const extname = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
+        
+        // Check MIME type - allow image/*, video/*, and audio/*
+        const isImage = file.mimetype.startsWith('image/');
+        const isVideo = file.mimetype.startsWith('video/');
+        const isAudio = file.mimetype.startsWith('audio/');
+        
+        if (extname && (isImage || isVideo || isAudio)) {
+            console.log('File accepted by multer');
             cb(null, true);
         } else {
-            cb(new Error('Invalid file type'));
+            console.log('File rejected by multer:', { extname, isImage, isVideo, isAudio });
+            cb(new Error('Invalid file type. Allowed: images, videos, and audio files'));
         }
     }
 });
 
+// Error handler for multer
+const handleMulterError = (err, req, res, next) => {
+    if (err instanceof multer.MulterError) {
+        console.error('Multer error:', err);
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ error: 'File too large. Maximum size is 200MB' });
+        }
+        return res.status(400).json({ error: `File upload error: ${err.message}` });
+    } else if (err) {
+        console.error('File upload error:', err);
+        return res.status(400).json({ error: err.message || 'File upload failed' });
+    }
+    next();
+};
+
 // Create post
-router.post('/', authenticateToken, upload.single('file'), validateFile, [
-    body('title').optional().trim().isLength({ max: 200 }).escape(),
-    body('description').optional().isLength({ max: 2000 }).escape(),
+// Order matters: authenticateToken -> upload.single -> handleMulterError -> validateFile -> validators -> validateInput -> handler
+router.post('/', authenticateToken, upload.single('file'), handleMulterError, (req, res, next) => {
+    // Debug middleware to check if file was parsed
+    console.log('After multer - File parsed:', !!req.file);
+    if (req.file) {
+        console.log('File details:', {
+            fieldname: req.file.fieldname,
+            originalname: req.file.originalname,
+            mimetype: req.file.mimetype,
+            size: req.file.size
+        });
+    } else {
+        console.log('No file in req.file. Multer may have failed.');
+        console.log('Request headers:', req.headers['content-type']);
+        console.log('Request body keys:', Object.keys(req.body || {}));
+    }
+    next();
+}, validateFile, [
+    body('title').optional().trim().isLength({ max: 200 }),
+    body('description').optional().isLength({ max: 2000 }),
     body('category_id').isInt({ min: 1 }),
-    body('subcategory_id').optional().isInt({ min: 1 })
+    body('subcategory_id').optional().isInt({ min: 1 }),
+    body('tags').optional().custom((value) => {
+        if (value === null || value === undefined || value === '') return true;
+        try {
+            const tags = typeof value === 'string' ? JSON.parse(value) : value;
+            if (!Array.isArray(tags)) return false;
+            if (tags.length > 10) throw new Error('Maximum 10 tags allowed');
+            if (tags.some(tag => typeof tag !== 'string' || tag.trim().length === 0 || tag.length > 30)) {
+                throw new Error('Each tag must be a non-empty string with max 30 characters');
+            }
+            return true;
+        } catch (e) {
+            throw new Error(e.message || 'Invalid tags format');
+        }
+    })
 ], validateInput, async (req, res) => {
     try {
+        // Debug logging for file upload issues
+        console.log('POST /posts - File upload request received');
+        console.log('Content-Type:', req.headers['content-type']);
+        console.log('Has file:', !!req.file);
+        console.log('File info:', req.file ? { name: req.file.originalname, size: req.file.size, mimetype: req.file.mimetype } : 'none');
+        console.log('Body keys:', Object.keys(req.body));
+        
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
+            console.log('Validation errors:', errors.array());
             return res.status(400).json({ errors: errors.array() });
         }
 
         if (!req.file) {
+            console.error('No file in request. Multer may have failed to parse the file.');
             return res.status(400).json({ error: 'File required' });
         }
 
-        const { title, description, category_id, subcategory_id } = req.body;
-        const fileType = req.file.mimetype.startsWith('image/') ? 'image' : 'video';
+        const { title, description, category_id, subcategory_id, tags } = req.body;
+        
+        // Process tags: parse if string, validate, and store as JSON
+        let tagsJson = null;
+        if (tags) {
+            try {
+                const tagsArray = typeof tags === 'string' ? JSON.parse(tags) : tags;
+                if (Array.isArray(tagsArray) && tagsArray.length > 0) {
+                    // Trim and filter empty tags, limit to 10
+                    const processedTags = tagsArray
+                        .map(tag => tag.trim())
+                        .filter(tag => tag.length > 0)
+                        .slice(0, 10);
+                    if (processedTags.length > 0) {
+                        tagsJson = JSON.stringify(processedTags);
+                    }
+                }
+            } catch (e) {
+                console.error('Error processing tags:', e);
+            }
+        }
+        
+        // Determine file type: image, video, or audio
+        let fileType = 'video'; // default
+        if (req.file.mimetype.startsWith('image/')) {
+            fileType = 'image';
+        } else if (req.file.mimetype.startsWith('video/')) {
+            fileType = 'video';
+        } else if (req.file.mimetype.startsWith('audio/')) {
+            fileType = 'audio';
+        }
         const filePath = `/uploads/${req.file.filename}`;
 
         const result = await db.promise.run(
-            `INSERT INTO posts (user_id, category_id, subcategory_id, title, description, file_path, file_type)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [req.user.id, category_id, subcategory_id || null, title || null, description || null, filePath, fileType]
+            `INSERT INTO posts (user_id, category_id, subcategory_id, title, description, tags, file_path, file_type)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [req.user.id, category_id, subcategory_id || null, title || null, description || null, tagsJson, filePath, fileType]
         );
 
         const { decodeHtmlEntities } = require('../middleware/security');
@@ -79,9 +177,19 @@ router.post('/', authenticateToken, upload.single('file'), validateFile, [
         );
 
         // Decode HTML entities in post title and description
+        // Parse tags JSON if present
         if (post) {
             post.title = post.title ? decodeHtmlEntities(post.title) : post.title;
             post.description = post.description ? decodeHtmlEntities(post.description) : post.description;
+            if (post.tags) {
+                try {
+                    post.tags = JSON.parse(post.tags);
+                } catch (e) {
+                    post.tags = [];
+                }
+            } else {
+                post.tags = [];
+            }
         }
 
         res.status(201).json(post);
@@ -125,11 +233,23 @@ router.get('/', authenticateToken, async (req, res) => {
         const { decodeHtmlEntities } = require('../middleware/security');
         const posts = await db.promise.all(query, params);
         // Decode HTML entities in post titles and descriptions
-        const decodedPosts = posts.map(post => ({
-            ...post,
-            title: post.title ? decodeHtmlEntities(post.title) : post.title,
-            description: post.description ? decodeHtmlEntities(post.description) : post.description
-        }));
+        // Parse tags JSON if present
+        const decodedPosts = posts.map(post => {
+            let tags = [];
+            if (post.tags) {
+                try {
+                    tags = JSON.parse(post.tags);
+                } catch (e) {
+                    tags = [];
+                }
+            }
+            return {
+                ...post,
+                title: post.title ? decodeHtmlEntities(post.title) : post.title,
+                description: post.description ? decodeHtmlEntities(post.description) : post.description,
+                tags: tags
+            };
+        });
         res.json(decodedPosts);
     } catch (error) {
         console.error('Get posts error:', error);
@@ -157,9 +277,19 @@ router.get('/:id', authenticateToken, async (req, res) => {
         }
 
         // Decode HTML entities in post title and description
+        // Parse tags JSON if present
         const { decodeHtmlEntities } = require('../middleware/security');
         post.title = post.title ? decodeHtmlEntities(post.title) : post.title;
         post.description = post.description ? decodeHtmlEntities(post.description) : post.description;
+        if (post.tags) {
+            try {
+                post.tags = JSON.parse(post.tags);
+            } catch (e) {
+                post.tags = [];
+            }
+        } else {
+            post.tags = [];
+        }
 
         res.json(post);
     } catch (error) {
@@ -171,7 +301,21 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Update post (owner or admin only)
 router.put('/:id', authenticateToken, [
     body('title').optional().trim().isLength({ max: 200 }),
-    body('description').optional().isLength({ max: 2000 })
+    body('description').optional().isLength({ max: 2000 }),
+    body('tags').optional().custom((value) => {
+        if (value === null || value === undefined || value === '') return true;
+        try {
+            const tags = typeof value === 'string' ? JSON.parse(value) : value;
+            if (!Array.isArray(tags)) return false;
+            if (tags.length > 10) throw new Error('Maximum 10 tags allowed');
+            if (tags.some(tag => typeof tag !== 'string' || tag.trim().length === 0 || tag.length > 30)) {
+                throw new Error('Each tag must be a non-empty string with max 30 characters');
+            }
+            return true;
+        } catch (e) {
+            throw new Error(e.message || 'Invalid tags format');
+        }
+    })
 ], async (req, res) => {
     try {
         const errors = validationResult(req);
@@ -186,11 +330,12 @@ router.put('/:id', authenticateToken, [
             return res.status(404).json({ error: 'Post not found' });
         }
 
+        // Authorization: users can only edit their own posts, admins can edit all
         if (post.user_id !== req.user.id && req.user.role !== 'admin') {
             return res.status(403).json({ error: 'Not authorized' });
         }
 
-        const { title, description } = req.body;
+        const { title, description, tags } = req.body;
         const updates = [];
         const values = [];
 
@@ -201,6 +346,29 @@ router.put('/:id', authenticateToken, [
         if (description !== undefined) {
             updates.push('description = ?');
             values.push(description);
+        }
+        if (tags !== undefined) {
+            // Process tags: parse if string, validate, and store as JSON
+            let tagsJson = null;
+            if (tags !== null && tags !== '') {
+                try {
+                    const tagsArray = typeof tags === 'string' ? JSON.parse(tags) : tags;
+                    if (Array.isArray(tagsArray) && tagsArray.length > 0) {
+                        // Trim and filter empty tags, limit to 10
+                        const processedTags = tagsArray
+                            .map(tag => tag.trim())
+                            .filter(tag => tag.length > 0)
+                            .slice(0, 10);
+                        if (processedTags.length > 0) {
+                            tagsJson = JSON.stringify(processedTags);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error processing tags:', e);
+                }
+            }
+            updates.push('tags = ?');
+            values.push(tagsJson);
         }
 
         if (updates.length === 0) {
@@ -226,9 +394,19 @@ router.put('/:id', authenticateToken, [
         );
         
         // Decode HTML entities in post title and description
+        // Parse tags JSON if present
         if (updatedPost) {
             updatedPost.title = updatedPost.title ? decodeHtmlEntities(updatedPost.title) : updatedPost.title;
             updatedPost.description = updatedPost.description ? decodeHtmlEntities(updatedPost.description) : updatedPost.description;
+            if (updatedPost.tags) {
+                try {
+                    updatedPost.tags = JSON.parse(updatedPost.tags);
+                } catch (e) {
+                    updatedPost.tags = [];
+                }
+            } else {
+                updatedPost.tags = [];
+            }
         }
         
         res.json(updatedPost);

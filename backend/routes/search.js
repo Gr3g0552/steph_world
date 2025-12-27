@@ -39,11 +39,23 @@ router.get('/posts', authenticateToken, async (req, res) => {
         const posts = await db.promise.all(query, params);
         
         // Decode HTML entities in post titles and descriptions
-        const decodedPosts = posts.map(post => ({
-            ...post,
-            title: post.title ? decodeHtmlEntities(post.title) : post.title,
-            description: post.description ? decodeHtmlEntities(post.description) : post.description
-        }));
+        // Parse tags JSON if present
+        const decodedPosts = posts.map(post => {
+            let tags = [];
+            if (post.tags) {
+                try {
+                    tags = JSON.parse(post.tags);
+                } catch (e) {
+                    tags = [];
+                }
+            }
+            return {
+                ...post,
+                title: post.title ? decodeHtmlEntities(post.title) : post.title,
+                description: post.description ? decodeHtmlEntities(post.description) : post.description,
+                tags: tags
+            };
+        });
         
         res.json(decodedPosts);
     } catch (error) {
@@ -52,30 +64,63 @@ router.get('/posts', authenticateToken, async (req, res) => {
     }
 });
 
-// Search users
+// Search users (or get all users if no query)
 router.get('/users', authenticateToken, async (req, res) => {
     try {
-        const { q, limit = 20, offset = 0 } = req.query;
+        const { q, limit = 50, offset = 0 } = req.query;
         
-        if (!q || q.trim().length < 2) {
-            return res.status(400).json({ error: 'Search query must be at least 2 characters' });
+        let query;
+        let params;
+
+        if (q && q.trim().length >= 2) {
+            // Search mode: filter by query
+            const searchTerm = `%${q.trim()}%`;
+            query = `
+                SELECT u.id, u.username, u.profile_image, u.description, u.last_activity,
+                        (SELECT COUNT(*) FROM posts WHERE user_id = u.id) as posts_count,
+                        (SELECT COUNT(*) FROM follows WHERE following_id = u.id) as followers_count,
+                        EXISTS(SELECT 1 FROM follows WHERE follower_id = ? AND following_id = u.id) as is_following
+                 FROM users u
+                 WHERE u.is_approved = 1
+                 AND (u.username LIKE ? OR u.description LIKE ?)
+                 ORDER BY u.username ASC
+                 LIMIT ? OFFSET ?
+            `;
+            params = [req.user.id, searchTerm, searchTerm, parseInt(limit), parseInt(offset)];
+        } else {
+            // Default mode: return all approved users
+            query = `
+                SELECT u.id, u.username, u.profile_image, u.description, u.last_activity,
+                        (SELECT COUNT(*) FROM posts WHERE user_id = u.id) as posts_count,
+                        (SELECT COUNT(*) FROM follows WHERE following_id = u.id) as followers_count,
+                        EXISTS(SELECT 1 FROM follows WHERE follower_id = ? AND following_id = u.id) as is_following
+                 FROM users u
+                 WHERE u.is_approved = 1
+                 ORDER BY u.username ASC
+                 LIMIT ? OFFSET ?
+            `;
+            params = [req.user.id, parseInt(limit), parseInt(offset)];
         }
 
-        const searchTerm = `%${q.trim()}%`;
-        const users = await db.promise.all(
-            `SELECT u.id, u.username, u.profile_image, u.description,
-                    (SELECT COUNT(*) FROM posts WHERE user_id = u.id) as posts_count,
-                    (SELECT COUNT(*) FROM follows WHERE following_id = u.id) as followers_count,
-                    EXISTS(SELECT 1 FROM follows WHERE follower_id = ? AND following_id = u.id) as is_following
-             FROM users u
-             WHERE u.is_approved = 1
-             AND (u.username LIKE ? OR u.description LIKE ?)
-             ORDER BY u.username ASC
-             LIMIT ? OFFSET ?`,
-            [req.user.id, searchTerm, searchTerm, parseInt(limit), parseInt(offset)]
-        );
+        const users = await db.promise.all(query, params);
 
-        res.json(users);
+        // Calculate online status (online if last_activity is within last 5 minutes)
+        const now = new Date();
+        const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+        
+        const usersWithStatus = users.map(user => {
+            let isOnline = false;
+            if (user.last_activity) {
+                const lastActivity = new Date(user.last_activity);
+                isOnline = lastActivity > fiveMinutesAgo;
+            }
+            return {
+                ...user,
+                is_online: isOnline
+            };
+        });
+
+        res.json(usersWithStatus);
     } catch (error) {
         console.error('Search users error:', error);
         res.status(500).json({ error: 'Failed to search users' });

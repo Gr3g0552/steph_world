@@ -16,6 +16,13 @@ const AdminCategories = () => {
   });
   const [newImageUrl, setNewImageUrl] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [subcategories, setSubcategories] = useState([]);
+  const [showSubcategoryModal, setShowSubcategoryModal] = useState(false);
+  const [editingSubcategory, setEditingSubcategory] = useState(null);
+  const [subcategoryFormData, setSubcategoryFormData] = useState({
+    name: '',
+    slug: ''
+  });
 
   useEffect(() => {
     loadCategories();
@@ -44,6 +51,7 @@ const AdminCategories = () => {
       setEditingCategory(null);
       setFormData({ name: '', slug: '', background_images: [], image_interval: 3000 });
       setNewImageUrl('');
+      setSubcategories([]);
       loadCategories();
     } catch (error) {
       console.error('Error saving category:', error);
@@ -59,7 +67,72 @@ const AdminCategories = () => {
       background_images: category.background_images || [],
       image_interval: category.image_interval || 3000
     });
+    setSubcategories(category.subcategories || []);
     setShowModal(true);
+  };
+
+  const loadSubcategories = async (categoryId) => {
+    try {
+      const response = await api.get('/categories');
+      const category = response.data.find(c => c.id === categoryId);
+      if (category) {
+        setSubcategories(category.subcategories || []);
+      }
+    } catch (error) {
+      console.error('Error loading subcategories:', error);
+    }
+  };
+
+  const handleAddSubcategory = () => {
+    setEditingSubcategory(null);
+    setSubcategoryFormData({ name: '', slug: '' });
+    setShowSubcategoryModal(true);
+  };
+
+  const handleEditSubcategory = (subcategory) => {
+    setEditingSubcategory(subcategory);
+    setSubcategoryFormData({
+      name: subcategory.name,
+      slug: subcategory.slug
+    });
+    setShowSubcategoryModal(true);
+  };
+
+  const handleSaveSubcategory = async (e) => {
+    e.preventDefault();
+    if (!editingCategory) {
+      alert('Veuillez d\'abord créer ou modifier une catégorie');
+      return;
+    }
+    try {
+      if (editingSubcategory) {
+        await api.put(`/admin/subcategories/${editingSubcategory.id}`, subcategoryFormData);
+      } else {
+        await api.post(`/admin/categories/${editingCategory.id}/subcategories`, subcategoryFormData);
+      }
+      setShowSubcategoryModal(false);
+      setEditingSubcategory(null);
+      setSubcategoryFormData({ name: '', slug: '' });
+      await loadSubcategories(editingCategory.id);
+      loadCategories(); // Reload to update subcategory count
+    } catch (error) {
+      console.error('Error saving subcategory:', error);
+      alert('Erreur lors de la sauvegarde de la sous-catégorie');
+    }
+  };
+
+  const handleDeleteSubcategory = async (subcategoryId) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette sous-catégorie ?')) {
+      return;
+    }
+    try {
+      await api.delete(`/admin/subcategories/${subcategoryId}`);
+      await loadSubcategories(editingCategory.id);
+      loadCategories(); // Reload to update subcategory count
+    } catch (error) {
+      console.error('Error deleting subcategory:', error);
+      alert('Erreur lors de la suppression');
+    }
   };
 
   const handleAddImage = () => {
@@ -269,9 +342,135 @@ const AdminCategories = () => {
                 />
                 <small>Valeur par défaut: 3000ms (3 secondes)</small>
               </div>
+
+              {/* Subcategories Section */}
+              <div className="form-group" style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <label style={{ margin: 0 }}>Sous-catégories</label>
+                  <button 
+                    type="button" 
+                    onClick={handleAddSubcategory}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      background: 'rgba(102, 126, 234, 0.2)',
+                      color: '#667eea',
+                      border: '1px solid rgba(102, 126, 234, 0.5)',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem'
+                    }}
+                  >
+                    + Ajouter
+                  </button>
+                </div>
+                {subcategories.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {subcategories.map((sub) => (
+                      <div 
+                        key={sub.id} 
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '0.75rem',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          borderRadius: '6px'
+                        }}
+                      >
+                        <div>
+                          <strong>{sub.name}</strong>
+                          <span style={{ marginLeft: '0.5rem', color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.875rem' }}>
+                            ({sub.slug})
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleEditSubcategory(sub)}
+                            style={{
+                              padding: '0.25rem 0.75rem',
+                              background: 'rgba(102, 126, 234, 0.2)',
+                              color: '#667eea',
+                              border: '1px solid rgba(102, 126, 234, 0.5)',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '0.875rem'
+                            }}
+                          >
+                            Modifier
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteSubcategory(sub.id)}
+                            style={{
+                              padding: '0.25rem 0.75rem',
+                              background: 'rgba(255, 77, 77, 0.2)',
+                              color: '#ff4d4d',
+                              border: '1px solid rgba(255, 77, 77, 0.5)',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '0.875rem'
+                            }}
+                          >
+                            Supprimer
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.875rem', fontStyle: 'italic' }}>
+                    Aucune sous-catégorie. Cliquez sur "Ajouter" pour en créer une.
+                  </p>
+                )}
+              </div>
+
               <div className="form-actions">
                 <button type="submit">Enregistrer</button>
-                <button type="button" onClick={() => setShowModal(false)}>
+                <button type="button" onClick={() => {
+                  setShowModal(false);
+                  setSubcategories([]);
+                }}>
+                  Annuler
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Subcategory Modal */}
+      {showSubcategoryModal && (
+        <div className="modal-overlay" onClick={() => setShowSubcategoryModal(false)}>
+          <motion.div
+            className="modal-content"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2>{editingSubcategory ? 'Modifier' : 'Ajouter'} une sous-catégorie</h2>
+            <form onSubmit={handleSaveSubcategory}>
+              <div className="form-group">
+                <label>Nom</label>
+                <input
+                  type="text"
+                  value={subcategoryFormData.name}
+                  onChange={(e) => setSubcategoryFormData({ ...subcategoryFormData, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Slug</label>
+                <input
+                  type="text"
+                  value={subcategoryFormData.slug}
+                  onChange={(e) => setSubcategoryFormData({ ...subcategoryFormData, slug: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="form-actions">
+                <button type="submit">Enregistrer</button>
+                <button type="button" onClick={() => setShowSubcategoryModal(false)}>
                   Annuler
                 </button>
               </div>

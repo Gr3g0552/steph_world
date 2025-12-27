@@ -19,8 +19,11 @@ const PostDetailPage = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [expanded, setExpanded] = useState(false);
-  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [editTags, setEditTags] = useState([]);
+  const [tagInput, setTagInput] = useState('');
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -40,6 +43,8 @@ const PostDetailPage = () => {
     }
   };
 
+  const canEdit = post && user && (user.id === post.user_id || user.role === 'admin');
+
 
   const handleLike = async () => {
     if (!user) return;
@@ -55,33 +60,71 @@ const PostDetailPage = () => {
     }
   };
 
-  const handleEditDescription = () => {
+  const handleEdit = () => {
+    setEditTitle(post.title || '');
     setEditDescription(post.description || '');
-    setIsEditingDescription(true);
+    setEditTags(post.tags || []);
+    setTagInput('');
+    setIsEditing(true);
     setExpanded(true); // Expand when editing
   };
 
-  const handleSaveDescription = async () => {
-    if (!editDescription.trim() && editDescription.length > 2000) {
+  const handleAddTag = (e) => {
+    if (e.key === 'Enter' && tagInput.trim() && editTags.length < 10) {
+      e.preventDefault();
+      const newTag = tagInput.trim().substring(0, 30);
+      if (!editTags.includes(newTag)) {
+        setEditTags([...editTags, newTag]);
+        setTagInput('');
+      }
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove) => {
+    setEditTags(editTags.filter(tag => tag !== tagToRemove));
+  };
+
+  const handleSave = async () => {
+    if (editDescription.length > 2000) {
       showToast('La description ne peut pas dépasser 2000 caractères', 'error');
       return;
     }
     
     try {
-      const response = await api.put(`/posts/${id}`, { description: editDescription });
+      const updateData = {};
+      if (editTitle !== (post.title || '')) {
+        updateData.title = editTitle;
+      }
+      if (editDescription !== (post.description || '')) {
+        updateData.description = editDescription;
+      }
+      const currentTags = post.tags || [];
+      if (JSON.stringify(editTags.sort()) !== JSON.stringify(currentTags.sort())) {
+        updateData.tags = editTags.length > 0 ? JSON.stringify(editTags) : null;
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        setIsEditing(false);
+        return;
+      }
+
+      const response = await api.put(`/posts/${id}`, updateData);
       setPost(response.data);
-      setIsEditingDescription(false);
-      showToast('Description modifiée avec succès', 'success');
+      setIsEditing(false);
+      showToast('Publication modifiée avec succès', 'success');
     } catch (error) {
-      console.error('Error updating description:', error);
+      console.error('Error updating post:', error);
       const errorMsg = error.response?.data?.error || 'Erreur lors de la modification';
       showToast(errorMsg, 'error');
     }
   };
 
   const handleCancelEdit = () => {
-    setIsEditingDescription(false);
+    setIsEditing(false);
+    setEditTitle('');
     setEditDescription('');
+    setEditTags([]);
+    setTagInput('');
   };
 
 
@@ -112,6 +155,12 @@ const PostDetailPage = () => {
           <div className="post-detail-media">
             {post.file_type === 'image' ? (
               <img src={post.file_path} alt={post.title || 'Post'} />
+            ) : post.file_type === 'video' ? (
+              <video src={post.file_path} controls />
+            ) : post.file_type === 'audio' ? (
+              <div className="audio-player-container">
+                <audio src={post.file_path} controls style={{ width: '100%' }} />
+              </div>
             ) : (
               <video src={post.file_path} controls />
             )}
@@ -133,41 +182,110 @@ const PostDetailPage = () => {
             </Link>
           </div>
 
-          {post.title && <h2>{post.title}</h2>}
+          {isEditing ? (
+            <div className="post-edit-form">
+              <div className="form-group">
+                <label>Titre</label>
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  maxLength={200}
+                  className="edit-input"
+                  placeholder="Titre de la publication..."
+                />
+              </div>
 
-          {(description || (user && user.id === post.user_id)) && (
-            <div className="post-description">
-              {isEditingDescription ? (
-                <div className="description-edit-form">
-                  <textarea
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    rows={4}
-                    maxLength={2000}
-                    className="description-edit-textarea"
-                    placeholder="Description de la publication..."
-                  />
-                  <div className="description-edit-actions">
-                    <button
-                      onClick={handleSaveDescription}
-                      className="save-button"
-                      disabled={!editDescription.trim()}
-                    >
-                      <FaCheck /> Enregistrer
-                    </button>
-                    <button
-                      onClick={handleCancelEdit}
-                      className="cancel-button"
-                    >
-                      <FaTimes /> Annuler
-                    </button>
+              <div className="form-group">
+                <label>Description</label>
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={5}
+                  maxLength={2000}
+                  className="edit-textarea"
+                  placeholder="Description de la publication..."
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Tags (max 10 tags, 30 caractères chacun)</label>
+                <input
+                  type="text"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyPress={handleAddTag}
+                  placeholder="Appuyez sur Entrée pour ajouter un tag"
+                  maxLength={30}
+                  disabled={editTags.length >= 10}
+                  className="edit-input"
+                />
+                {editTags.length > 0 && (
+                  <div className="tags-container" style={{ marginTop: '0.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {editTags.map((tag, index) => (
+                      <span
+                        key={index}
+                        className="tag"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          padding: '0.25rem 0.5rem',
+                          background: 'rgba(102, 126, 234, 0.2)',
+                          borderRadius: '4px',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTag(tag)}
+                          style={{
+                            marginLeft: '0.5rem',
+                            background: 'none',
+                            border: 'none',
+                            color: 'white',
+                            cursor: 'pointer',
+                            fontSize: '1rem',
+                            lineHeight: '1'
+                          }}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
                   </div>
-                </div>
-              ) : (
-                <>
+                )}
+                {editTags.length >= 10 && (
+                  <small style={{ color: '#999', display: 'block', marginTop: '0.25rem' }}>
+                    Maximum 10 tags atteint
+                  </small>
+                )}
+              </div>
+
+              <div className="edit-actions">
+                <button
+                  onClick={handleSave}
+                  className="save-button"
+                >
+                  <FaCheck /> Enregistrer
+                </button>
+                <button
+                  onClick={handleCancelEdit}
+                  className="cancel-button"
+                >
+                  <FaTimes /> Annuler
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {post.title && <h2>{post.title}</h2>}
+
+              {(description || canEdit) && (
+                <div className="post-description">
                   {description && <p>{displayText}</p>}
                   <div className="description-actions">
-                    {shouldTruncate && !isEditingDescription && (
+                    {shouldTruncate && !isEditing && (
                       <button
                         className="expand-button"
                         onClick={() => setExpanded(!expanded)}
@@ -175,19 +293,39 @@ const PostDetailPage = () => {
                         {expanded ? 'Voir moins' : 'Voir plus'}
                       </button>
                     )}
-                    {user && user.id === post.user_id && (
+                    {canEdit && (
                       <button
                         className="edit-description-button"
-                        onClick={handleEditDescription}
-                        title="Modifier la description"
+                        onClick={handleEdit}
+                        title="Modifier la publication"
                       >
                         <FaEdit /> Modifier
                       </button>
                     )}
                   </div>
-                </>
+                </div>
               )}
-            </div>
+
+              {post.tags && post.tags.length > 0 && (
+                <div className="post-tags" style={{ marginTop: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {post.tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="tag"
+                      style={{
+                        display: 'inline-block',
+                        padding: '0.25rem 0.5rem',
+                        background: 'rgba(102, 126, 234, 0.2)',
+                        borderRadius: '4px',
+                        fontSize: '0.875rem'
+                      }}
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
           <div className="post-actions">

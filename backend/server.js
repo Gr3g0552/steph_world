@@ -85,8 +85,17 @@ app.use(helmet({
             scriptSrc: [
                 "'self'",
                 "'unsafe-inline'", // Allow inline scripts
+                "'unsafe-eval'", // Allow eval for Cloudflare challenge scripts
                 "https://*.cloudflare.com", // Allow all Cloudflare scripts (challenges, etc.)
                 "https://*.cloudflareinsights.com" // Cloudflare Insights (if enabled)
+            ],
+            scriptSrcElem: [
+                "'self'", // Allow scripts from same origin (for Cloudflare challenge platform)
+                "'unsafe-inline'", // Allow inline scripts
+                "'unsafe-eval'", // Allow eval for Cloudflare challenge scripts
+                "https://*.cloudflare.com", // Allow all Cloudflare scripts
+                "https://*.cloudflareinsights.com", // Cloudflare Insights
+                "https://steph-world.okabido.com" // Explicitly allow same origin
             ],
             imgSrc: ["'self'", "data:", "https:", "http:"],
             connectSrc: [
@@ -104,8 +113,9 @@ app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// Only parse JSON and URL-encoded bodies, not multipart/form-data (handled by multer)
+app.use(express.json({ limit: '200mb' }));
+app.use(express.urlencoded({ extended: true, limit: '200mb' }));
 
 // Security middleware (sanitization and validation)
 const { sanitizeBody, validateId } = require('./middleware/security');

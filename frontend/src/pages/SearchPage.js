@@ -17,12 +17,32 @@ const SearchPage = () => {
   const [categoryFilter, setCategoryFilter] = useState('');
 
   useEffect(() => {
-    if (query.trim().length >= 2) {
+    if (type === 'users') {
+      // For users tab, load all users by default or search if query is provided
+      loadUsers();
+    } else if (query.trim().length >= 2) {
+      // For posts tab, only search if query is provided
       performSearch();
     } else {
       setResults([]);
     }
   }, [query, type, categoryFilter]);
+
+  const loadUsers = async () => {
+    setLoading(true);
+    try {
+      const params = {};
+      if (query.trim().length >= 2) {
+        params.q = query;
+      }
+      const response = await api.get('/search/users', { params });
+      setResults(response.data);
+    } catch (error) {
+      console.error('Load users error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const performSearch = async () => {
     setLoading(true);
@@ -87,6 +107,45 @@ const SearchPage = () => {
 
         {loading ? (
           <SkeletonLoader type="post" count={3} />
+        ) : type === 'users' ? (
+          // Users tab: show all users by default, or search results if query provided
+          results.length === 0 ? (
+            <div className="search-no-results">
+              <p>Aucun utilisateur trouvé</p>
+            </div>
+          ) : (
+            <div className="search-results">
+              <div className="users-grid">
+                {results.map((user) => (
+                  <motion.div
+                    key={user.id}
+                    className="user-card"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    whileHover={{ scale: 1.02 }}
+                  >
+                    <div className="user-card-avatar-container">
+                      <img
+                        src={user.profile_image || 'https://via.placeholder.com/100'}
+                        alt={user.username}
+                        className="user-card-avatar"
+                      />
+                      <span
+                        className={`user-status-indicator ${user.is_online ? 'online' : 'offline'}`}
+                        title={user.is_online ? 'En ligne' : 'Hors ligne'}
+                      />
+                    </div>
+                    <h3>{user.username}</h3>
+                    {user.description && <p>{user.description}</p>}
+                    <div className="user-stats">
+                      <span>{user.posts_count || 0} publications</span>
+                      <span>{user.followers_count || 0} abonnés</span>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )
         ) : query.trim().length < 2 ? (
           <div className="search-placeholder">
             <p>Entrez au moins 2 caractères pour rechercher</p>
@@ -103,31 +162,7 @@ const SearchPage = () => {
                   <PostCard key={post.id} post={post} />
                 ))}
               </div>
-            ) : (
-              <div className="users-grid">
-                {results.map((user) => (
-                  <motion.div
-                    key={user.id}
-                    className="user-card"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    whileHover={{ scale: 1.02 }}
-                  >
-                    <img
-                      src={user.profile_image || 'https://via.placeholder.com/100'}
-                      alt={user.username}
-                      className="user-card-avatar"
-                    />
-                    <h3>{user.username}</h3>
-                    {user.description && <p>{user.description}</p>}
-                    <div className="user-stats">
-                      <span>{user.posts_count || 0} publications</span>
-                      <span>{user.followers_count || 0} abonnés</span>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
+            ) : null}
           </div>
         )}
       </motion.div>

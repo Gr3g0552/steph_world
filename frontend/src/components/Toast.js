@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Toast.css';
 
-const Toast = ({ message, type = 'info', onClose, duration = 1000 }) => {
+const Toast = ({ message, type = 'info', onClose, duration = 3000 }) => {
   useEffect(() => {
     if (duration > 0) {
       const timer = setTimeout(() => {
