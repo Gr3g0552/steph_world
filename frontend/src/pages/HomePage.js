@@ -52,14 +52,6 @@ const HomePage = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <motion.img
-            src="/logo.png"
-            alt="Steph World"
-            className="homepage-logo"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          />
           <h1 className="calligraphy-text">Let imagination become the voice through which thought unveils its hidden music.</h1>
         </motion.div>
       </div>
