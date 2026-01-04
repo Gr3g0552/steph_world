@@ -22,23 +22,11 @@ router.get('/', authenticateToken, async (req, res) => {
         );
         
         // Decode HTML entities in post titles and descriptions
-        // Parse tags JSON if present
-        const decodedPosts = savedPosts.map(post => {
-            let tags = [];
-            if (post.tags) {
-                try {
-                    tags = JSON.parse(post.tags);
-                } catch (e) {
-                    tags = [];
-                }
-            }
-            return {
-                ...post,
-                title: post.title ? decodeHtmlEntities(post.title) : post.title,
-                description: post.description ? decodeHtmlEntities(post.description) : post.description,
-                tags: tags
-            };
-        });
+        const decodedPosts = savedPosts.map(post => ({
+            ...post,
+            title: post.title ? decodeHtmlEntities(post.title) : post.title,
+            description: post.description ? decodeHtmlEntities(post.description) : post.description
+        }));
         
         res.json(decodedPosts);
     } catch (error) {

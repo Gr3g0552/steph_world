@@ -35,12 +35,13 @@ const Header = () => {
     >
       <div className="header-content">
         <Link to="/" className="logo">
-          <motion.h1
+          <motion.img
+            src="/logo.png"
+            alt="Steph World"
+            className="logo-image"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-          >
-            Steph World
-          </motion.h1>
+          />
         </Link>
 
         <nav className="nav">

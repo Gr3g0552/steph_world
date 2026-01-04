@@ -34,10 +34,19 @@
 
 .calligraphy-message {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   min-height: calc(100vh - 200px);
   padding: 4rem 2rem;
+}
+
+.homepage-logo {
+  width: 200px;
+  height: auto;
+  margin-bottom: 3rem;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.5));
 }
 
 .calligraphy-text {
@@ -125,6 +134,11 @@
   .calligraphy-message {
     padding: 2rem 1rem;
     min-height: auto;
+  }
+
+  .homepage-logo {
+    width: 150px;
+    margin-bottom: 2rem;
   }
 
   .calligraphy-text {

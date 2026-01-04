@@ -20,6 +20,14 @@
 .logo {
   text-decoration: none;
   color: #fff;
+  display: flex;
+  align-items: center;
+}
+
+.logo-image {
+  height: 50px;
+  width: auto;
+  object-fit: contain;
 }
 
 .logo h1 {
@@ -132,6 +140,10 @@
     gap: 0.75rem;
   }
 
+  .logo-image {
+    height: 40px;
+  }
+
   .logo h1 {
     font-size: 1.25rem;
   }
@@ -175,6 +187,10 @@
     padding: 1rem 1.5rem;
   }
 
+  .logo-image {
+    height: 45px;
+  }
+
   .logo h1 {
     font-size: 1.35rem;
   }
@@ -188,6 +204,10 @@
 @media (orientation: landscape) and (max-height: 600px) {
   .header {
     padding: 0.5rem 1rem;
+  }
+
+  .logo-image {
+    height: 35px;
   }
 
   .logo h1 {

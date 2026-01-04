@@ -41,11 +41,6 @@ const authenticateToken = (req, res, next) => {
             return res.status(403).json({ error: 'User not authorized' });
         }
 
-        // Update last activity timestamp
-        db.promise.run('UPDATE users SET last_activity = CURRENT_TIMESTAMP WHERE id = ?', [decoded.userId]).catch(err => {
-            console.error('Error updating last_activity:', err);
-        });
-
         req.user = user;
         next();
     });

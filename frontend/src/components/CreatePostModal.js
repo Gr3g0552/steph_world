@@ -13,8 +13,6 @@ const CreatePostModal = ({ isOpen, onClose, categories, onPostCreated }) => {
     subcategory_id: '',
     file: null
   });
-  const [tags, setTags] = useState([]);
-  const [tagInput, setTagInput] = useState('');
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -22,21 +20,6 @@ const CreatePostModal = ({ isOpen, onClose, categories, onPostCreated }) => {
   const { showToast } = useToast();
 
   const selectedCategory = categories.find(c => c.id === parseInt(formData.category_id));
-
-  const handleAddTag = (e) => {
-    if (e.key === 'Enter' && tagInput.trim() && tags.length < 10) {
-      e.preventDefault();
-      const newTag = tagInput.trim().substring(0, 30);
-      if (!tags.includes(newTag)) {
-        setTags([...tags, newTag]);
-        setTagInput('');
-      }
-    }
-  };
-
-  const handleRemoveTag = (tagToRemove) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
-  };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -85,9 +68,6 @@ const CreatePostModal = ({ isOpen, onClose, categories, onPostCreated }) => {
       if (formData.subcategory_id) {
         formDataToSend.append('subcategory_id', formData.subcategory_id);
       }
-      if (tags.length > 0) {
-        formDataToSend.append('tags', JSON.stringify(tags));
-      }
 
       // Don't set Content-Type header - let axios set it automatically with the correct boundary
       // Safari is strict about multipart/form-data boundaries
@@ -114,8 +94,6 @@ const CreatePostModal = ({ isOpen, onClose, categories, onPostCreated }) => {
         subcategory_id: '',
         file: null
       });
-      setTags([]);
-      setTagInput('');
       setPreview(null);
       setUploadProgress(0);
       showToast('Publication créée avec succès', 'success');
@@ -237,59 +215,6 @@ const CreatePostModal = ({ isOpen, onClose, categories, onPostCreated }) => {
             <div className="word-count">
               {countWords(formData.description)} / 2000 mots
             </div>
-          </div>
-
-          <div className="form-group">
-            <label>Tags (optionnel, max 10 tags, 30 caractères chacun)</label>
-            <input
-              type="text"
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyPress={handleAddTag}
-              placeholder="Appuyez sur Entrée pour ajouter un tag"
-              maxLength={30}
-              disabled={tags.length >= 10}
-            />
-            {tags.length > 0 && (
-              <div className="tags-container" style={{ marginTop: '0.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                {tags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="tag"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      padding: '0.25rem 0.5rem',
-                      background: 'rgba(102, 126, 234, 0.2)',
-                      borderRadius: '4px',
-                      fontSize: '0.875rem'
-                    }}
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTag(tag)}
-                      style={{
-                        marginLeft: '0.5rem',
-                        background: 'none',
-                        border: 'none',
-                        color: 'white',
-                        cursor: 'pointer',
-                        fontSize: '1rem',
-                        lineHeight: '1'
-                      }}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-            {tags.length >= 10 && (
-              <small style={{ color: '#999', display: 'block', marginTop: '0.25rem' }}>
-                Maximum 10 tags atteint
-              </small>
-            )}
           </div>
 
           <div className="form-actions">

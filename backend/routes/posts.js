@@ -91,21 +91,7 @@ router.post('/', authenticateToken, upload.single('file'), handleMulterError, (r
     body('title').optional().trim().isLength({ max: 200 }),
     body('description').optional().isLength({ max: 2000 }),
     body('category_id').isInt({ min: 1 }),
-    body('subcategory_id').optional().isInt({ min: 1 }),
-    body('tags').optional().custom((value) => {
-        if (value === null || value === undefined || value === '') return true;
-        try {
-            const tags = typeof value === 'string' ? JSON.parse(value) : value;
-            if (!Array.isArray(tags)) return false;
-            if (tags.length > 10) throw new Error('Maximum 10 tags allowed');
-            if (tags.some(tag => typeof tag !== 'string' || tag.trim().length === 0 || tag.length > 30)) {
-                throw new Error('Each tag must be a non-empty string with max 30 characters');
-            }
-            return true;
-        } catch (e) {
-            throw new Error(e.message || 'Invalid tags format');
-        }
-    })
+    body('subcategory_id').optional().isInt({ min: 1 })
 ], validateInput, async (req, res) => {
     try {
         // Debug logging for file upload issues
@@ -126,28 +112,7 @@ router.post('/', authenticateToken, upload.single('file'), handleMulterError, (r
             return res.status(400).json({ error: 'File required' });
         }
 
-        const { title, description, category_id, subcategory_id, tags } = req.body;
-        
-        // Process tags: parse if string, validate, and store as JSON
-        let tagsJson = null;
-        if (tags) {
-            try {
-                const tagsArray = typeof tags === 'string' ? JSON.parse(tags) : tags;
-                if (Array.isArray(tagsArray) && tagsArray.length > 0) {
-                    // Trim and filter empty tags, limit to 10
-                    const processedTags = tagsArray
-                        .map(tag => tag.trim())
-                        .filter(tag => tag.length > 0)
-                        .slice(0, 10);
-                    if (processedTags.length > 0) {
-                        tagsJson = JSON.stringify(processedTags);
-                    }
-                }
-            } catch (e) {
-                console.error('Error processing tags:', e);
-            }
-        }
-        
+        const { title, description, category_id, subcategory_id } = req.body;
         // Determine file type: image, video, or audio
         let fileType = 'video'; // default
         if (req.file.mimetype.startsWith('image/')) {
@@ -160,9 +125,9 @@ router.post('/', authenticateToken, upload.single('file'), handleMulterError, (r
         const filePath = `/uploads/${req.file.filename}`;
 
         const result = await db.promise.run(
-            `INSERT INTO posts (user_id, category_id, subcategory_id, title, description, tags, file_path, file_type)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [req.user.id, category_id, subcategory_id || null, title || null, description || null, tagsJson, filePath, fileType]
+            `INSERT INTO posts (user_id, category_id, subcategory_id, title, description, file_path, file_type)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [req.user.id, category_id, subcategory_id || null, title || null, description || null, filePath, fileType]
         );
 
         const { decodeHtmlEntities } = require('../middleware/security');
@@ -177,19 +142,9 @@ router.post('/', authenticateToken, upload.single('file'), handleMulterError, (r
         );
 
         // Decode HTML entities in post title and description
-        // Parse tags JSON if present
         if (post) {
             post.title = post.title ? decodeHtmlEntities(post.title) : post.title;
             post.description = post.description ? decodeHtmlEntities(post.description) : post.description;
-            if (post.tags) {
-                try {
-                    post.tags = JSON.parse(post.tags);
-                } catch (e) {
-                    post.tags = [];
-                }
-            } else {
-                post.tags = [];
-            }
         }
 
         res.status(201).json(post);
@@ -233,23 +188,11 @@ router.get('/', authenticateToken, async (req, res) => {
         const { decodeHtmlEntities } = require('../middleware/security');
         const posts = await db.promise.all(query, params);
         // Decode HTML entities in post titles and descriptions
-        // Parse tags JSON if present
-        const decodedPosts = posts.map(post => {
-            let tags = [];
-            if (post.tags) {
-                try {
-                    tags = JSON.parse(post.tags);
-                } catch (e) {
-                    tags = [];
-                }
-            }
-            return {
-                ...post,
-                title: post.title ? decodeHtmlEntities(post.title) : post.title,
-                description: post.description ? decodeHtmlEntities(post.description) : post.description,
-                tags: tags
-            };
-        });
+        const decodedPosts = posts.map(post => ({
+            ...post,
+            title: post.title ? decodeHtmlEntities(post.title) : post.title,
+            description: post.description ? decodeHtmlEntities(post.description) : post.description
+        }));
         res.json(decodedPosts);
     } catch (error) {
         console.error('Get posts error:', error);
@@ -277,19 +220,9 @@ router.get('/:id', authenticateToken, async (req, res) => {
         }
 
         // Decode HTML entities in post title and description
-        // Parse tags JSON if present
         const { decodeHtmlEntities } = require('../middleware/security');
         post.title = post.title ? decodeHtmlEntities(post.title) : post.title;
         post.description = post.description ? decodeHtmlEntities(post.description) : post.description;
-        if (post.tags) {
-            try {
-                post.tags = JSON.parse(post.tags);
-            } catch (e) {
-                post.tags = [];
-            }
-        } else {
-            post.tags = [];
-        }
 
         res.json(post);
     } catch (error) {
@@ -301,21 +234,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Update post (owner or admin only)
 router.put('/:id', authenticateToken, [
     body('title').optional().trim().isLength({ max: 200 }),
-    body('description').optional().isLength({ max: 2000 }),
-    body('tags').optional().custom((value) => {
-        if (value === null || value === undefined || value === '') return true;
-        try {
-            const tags = typeof value === 'string' ? JSON.parse(value) : value;
-            if (!Array.isArray(tags)) return false;
-            if (tags.length > 10) throw new Error('Maximum 10 tags allowed');
-            if (tags.some(tag => typeof tag !== 'string' || tag.trim().length === 0 || tag.length > 30)) {
-                throw new Error('Each tag must be a non-empty string with max 30 characters');
-            }
-            return true;
-        } catch (e) {
-            throw new Error(e.message || 'Invalid tags format');
-        }
-    })
+    body('description').optional().isLength({ max: 2000 })
 ], async (req, res) => {
     try {
         const errors = validationResult(req);
@@ -330,12 +249,11 @@ router.put('/:id', authenticateToken, [
             return res.status(404).json({ error: 'Post not found' });
         }
 
-        // Authorization: users can only edit their own posts, admins can edit all
         if (post.user_id !== req.user.id && req.user.role !== 'admin') {
             return res.status(403).json({ error: 'Not authorized' });
         }
 
-        const { title, description, tags } = req.body;
+        const { title, description } = req.body;
         const updates = [];
         const values = [];
 
@@ -346,29 +264,6 @@ router.put('/:id', authenticateToken, [
         if (description !== undefined) {
             updates.push('description = ?');
             values.push(description);
-        }
-        if (tags !== undefined) {
-            // Process tags: parse if string, validate, and store as JSON
-            let tagsJson = null;
-            if (tags !== null && tags !== '') {
-                try {
-                    const tagsArray = typeof tags === 'string' ? JSON.parse(tags) : tags;
-                    if (Array.isArray(tagsArray) && tagsArray.length > 0) {
-                        // Trim and filter empty tags, limit to 10
-                        const processedTags = tagsArray
-                            .map(tag => tag.trim())
-                            .filter(tag => tag.length > 0)
-                            .slice(0, 10);
-                        if (processedTags.length > 0) {
-                            tagsJson = JSON.stringify(processedTags);
-                        }
-                    }
-                } catch (e) {
-                    console.error('Error processing tags:', e);
-                }
-            }
-            updates.push('tags = ?');
-            values.push(tagsJson);
         }
 
         if (updates.length === 0) {
@@ -394,19 +289,9 @@ router.put('/:id', authenticateToken, [
         );
         
         // Decode HTML entities in post title and description
-        // Parse tags JSON if present
         if (updatedPost) {
             updatedPost.title = updatedPost.title ? decodeHtmlEntities(updatedPost.title) : updatedPost.title;
             updatedPost.description = updatedPost.description ? decodeHtmlEntities(updatedPost.description) : updatedPost.description;
-            if (updatedPost.tags) {
-                try {
-                    updatedPost.tags = JSON.parse(updatedPost.tags);
-                } catch (e) {
-                    updatedPost.tags = [];
-                }
-            } else {
-                updatedPost.tags = [];
-            }
         }
         
         res.json(updatedPost);

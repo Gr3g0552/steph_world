@@ -46,6 +46,7 @@ const LoginPage = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
+        <img src="/logo.png" alt="Steph World" className="auth-logo" />
         <h1>Connexion</h1>
         {error && <div className="error-message">{error}</div>}
         <form onSubmit={handleSubmit}>

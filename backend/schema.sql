@@ -10,7 +10,6 @@ CREATE TABLE IF NOT EXISTS users (
     profile_image TEXT,
     description TEXT,
     is_approved INTEGER DEFAULT 0,
-    last_activity DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -42,7 +41,6 @@ CREATE TABLE IF NOT EXISTS posts (
     subcategory_id INTEGER,
     title TEXT,
     description TEXT,
-    tags TEXT, -- JSON array of tags
     file_path TEXT NOT NULL,
     file_type TEXT NOT NULL, -- 'image', 'video', 'audio'
     likes_count INTEGER DEFAULT 0,

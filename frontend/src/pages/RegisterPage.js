@@ -56,6 +56,7 @@ const RegisterPage = () => {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
         >
+          <img src="/logo.png" alt="Steph World" className="auth-logo" />
           <h1>Inscription réussie !</h1>
           <p>Votre compte est en attente d'approbation par un administrateur.</p>
           <p>Redirection vers la page de connexion...</p>
@@ -72,6 +73,7 @@ const RegisterPage = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
+        <img src="/logo.svg" alt="Steph World" className="auth-logo" />
         <h1>Inscription</h1>
         {error && <div className="error-message">{error}</div>}
         <form onSubmit={handleSubmit}>

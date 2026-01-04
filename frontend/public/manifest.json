@@ -1,0 +1,21 @@
+{
+  "short_name": "Steph World",
+  "name": "Steph World - Plateforme personnalisée",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#764ba2",
+  "background_color": "#0a0a0a"
+}
+
